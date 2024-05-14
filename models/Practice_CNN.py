@@ -25,26 +25,6 @@ else:
     device='cpu'
 # %%
 
-path=r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\practice_data\public_dataset"
-
-name_set=set()
-for file in os.listdir(path):
-    if file.endswith('wav'):
-        name_set.add(file)
-print(len(name_set))
-
-t=os.path.join(path,list(name_set)[0])
-label_path=path
-fname=t[8:-4]
-l=os.path.join(label_path,fname+'.json')
-print(fname)
-with open(l,'r') as f:
-    content=json.loads(f.read())
-print(content)
-
-signal,sr=ta.load(t)
-# %%
-
 class AshBorerDataset(Dataset):
 
     def __init__(self,audio_path,label_path,transformation,target_sample_rate,num_samples,device):
@@ -104,3 +84,99 @@ class AshBorerDataset(Dataset):
             last_dim_padding=(0,num_padding) # first arg for left second for right padding. Make a list of tuples for multi dim
             waveform=torch.nn.functional.pad(waveform,last_dim_padding)
         return waveform
+
+
+class CNNNetwork(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.conv1=nn.Sequential(
+            nn.Conv2d(in_channels=1,out_channels=16,kernel_size=3,stride=1,padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv2=nn.Sequential(
+            nn.Conv2d(in_channels=16,out_channels=32,kernel_size=3,stride=1,padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv3=nn.Sequential(
+            nn.Conv2d(in_channels=32,out_channels=64,kernel_size=3,stride=1,padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv4=nn.Sequential(
+            nn.Conv2d(in_channels=64,out_channels=128,kernel_size=3,stride=1,padding=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.flatten=nn.Flatten()
+        self.linear1=nn.Linear(in_features=128*5*4,out_features=128)
+        self.linear2=nn.Linear(in_features=128,out_features=1)
+        self.output=nn.Sigmoid()
+    
+    def forward(self,input_data):
+        x=self.conv1(input_data)
+        x=self.conv2(x)
+        x=self.conv3(x)
+        x=self.conv4(x)
+        x=self.flatten(x)
+        x=self.linear1(x)
+        logits=self.linear2(x)
+        output=self.output(logits)
+        
+        return output
+      
+model=CNNNetwork().cuda()
+
+
+
+def train_single_epoch(model,dataloader,loss_fn,optimizer,device):
+    for waveform,label in tqdm.tqdm(dataloader):
+        waveform=waveform.to(device)
+        # label=pt.from_numpy(numpy.array(label))
+        label=label.to(device)
+        # calculate loss and preds
+        logits=model(waveform)
+        loss=loss_fn(logits.float(),label.float().view(-1,1))
+        # backpropogate the loss and update the gradients
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    print(f"loss:{loss.item()}")
+    
+def train(model,dataloader,loss_fn,optimizer,device,epochs):
+    for i in tqdm.tqdm(range(epochs)):
+        print(f"epoch:{i+1}")
+        train_single_epoch(model,dataloader,loss_fn,optimizer,device)
+        print('-------------------------------------------')
+    print('Finished Training')
+
+audio_path='Path Where .wav files are stored'
+label_path='Path Where json files are stored'
+SAMPLE_RATE=22050
+NUM_SAMPLES=22050
+BATCH_SIZE=128
+EPOCHS=1
+
+melspectogram=ta.transforms.MelSpectrogram(sample_rate=SAMPLE_RATE,n_fft=1024,hop_length=512,n_mels=64)
+coughvid_dataset=AshBorerDataset(audio_path,label_path,melspectogram,SAMPLE_RATE,NUM_SAMPLES,device)
+train_dataloader=DataLoader(coughvid_dataset,batch_size=BATCH_SIZE,shuffle=True)
+
+loss_fn=torch.nn.BCELoss()
+optimizer=torch.optim.adam(model.parameters(),lr=0.1)
+
+train(model,train_dataloader,loss_fn,optimizer,device,EPOCHS)
+
+
+waveform,label=coughvid_dataset[0]
+
+def predict(model,inputs,labels):
+    model.eval()
+    inputs=torch.unsqueeze(inputs,0)
+    with torch.no_grad():
+        predictions=model(inputs)
+    return predictions,labels
+  
+prediction,label=predict(model,waveform,label)
+print(prediction,label)
