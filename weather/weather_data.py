@@ -2,17 +2,38 @@
 import numpy as np
 import pandas as pd
 import os
-
-weather = pd.read_csv(r"C:\Users\jeffu\Downloads\72375003103.csv")
+import matplotlib.pyplot as plt
+from datetime import datetime
+from meteostat import Point, Hourly, Stations
 recording_path = r"C:\Users\jeffu\Documents\Recordings"
 
+stations = Stations()
+stations = stations.nearby(35.1983,-111.6513)
+station = stations.fetch(1)
+start = datetime(2024, 4, 16)
+end = datetime(2024,5,20)
+
+data = Hourly(station, start, end)
+data = data.fetch()
+
+data = data.loc[:,['temp','prcp','wspd']]
+data['date'] = pd.to_datetime(data.index).date
+data['hour'] = pd.to_datetime(data.index).hour
 # %%
-weather['DATE'] = pd.to_datetime(weather['DATE'])
+file_names= []
+datetimes = []
+for file_name in os.listdir(recording_path):
+    if file_name.endswith('.wav') :
+        datetime_object = datetime.strptime(file_name[:-4], '%Y-%m-%d_%H_%M_%S') 
 
-# Define the start and end dates
-start_date = pd.to_datetime('2024-05-16')
-end_date = pd.to_datetime('2024-05-20')
+        file_names.append(file_name)
+        datetimes.append(datetime_object)
+dates = [d.date() for d in datetimes]
+hours = [d.hour for d in datetimes]
+wav_data = {'File': file_names, 'date':dates, 'hour':hours}
+wav_df = pd.DataFrame(wav_data)
 
-# Filter the dataframe to keep only the entries between the start and end dates
-filtered_weather = weather[(weather['DATE'] >= start_date) & (weather['DATE'] <= end_date)]
+full_df = pd.merge(wav_df,data,how = 'inner', on = ['date','hour'])  
+      
+        
 # %%
