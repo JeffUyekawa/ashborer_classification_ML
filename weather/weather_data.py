@@ -37,3 +37,6 @@ full_df = pd.merge(wav_df,data,how = 'inner', on = ['date','hour'])
       
         
 # %%
+wind_df = full_df[full_df.wspd >= 37.0]
+prcp_df = full_df[full_df.prcp!=0]
+# %%
