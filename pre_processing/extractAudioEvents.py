@@ -58,8 +58,8 @@ def extract_audio_events(file_name, make_events_wav_files_logic=False):
     TMat = np.repeat(T_replicated_1[:, :, np.newaxis], num_channels, axis=2)
 
     t_select = TMat[select_mat]
-    f_select = FMat[select_mat]
-    channel_select = np.where(select_mat)[1]
+    f_select = FMat[select_mat].reshape(-1,1)
+    channel_select = np.where(select_mat)[1].reshape(-1,1)
     t_select_unique, ic = np.unique(t_select, return_inverse=True)
 
     if len(t_select_unique) > 1:
@@ -72,16 +72,16 @@ def extract_audio_events(file_name, make_events_wav_files_logic=False):
         t_clust = t_clust[ic]
     elif len(t_select_unique) == 1:
         num_clusters = 1
-        t_clust = np.array([1])
+        t_clust = np.ones(t_select.shape)
     else:
         num_clusters = 0
-        t_clust = np.array([1])
+        t_clust = np.ones(t_select.shape)
 
     t_clusters = np.zeros((num_clusters, 2))
     f_peak = np.zeros(num_clusters)
     channel_trigger = [None] * num_clusters
 
-    for i in range(num_clusters):
+    for i in np.arange(num_clusters):
         t1 = np.min(t_select[t_clust == i + 1])
         t2 = np.max(t_select[t_clust == i + 1])
         t_clust_curr = t_select[t_clust == i + 1]
@@ -132,10 +132,9 @@ def play_events(y_out, fs):
 
 
 # Uncomment the following lines to extract audio events and play them
-file_name = r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-17_04_23_22.wav"
+file_name = r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-16_16_31_13.wav"
 y_out, t_out, t0, f_peak, channel_trigger = extract_audio_events(file_name)
 play_events(y_out, 96000)
 
 
 #%%
-
