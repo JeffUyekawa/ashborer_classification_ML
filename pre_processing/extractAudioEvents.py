@@ -23,7 +23,7 @@ def extract_audio_events(file_name, make_events_wav_files_logic=False):
     ovlp_num = int(np.ceil(n_wind * ovlp_frac))
 
     window = np.kaiser(n_wind, 5)  # Use numpy to create Kaiser window
-    f, T, s = stft(y.T, fs, window=window, nperseg=n_wind, noverlap=ovlp_num, return_onesided=True)
+    f, T, s = stft(y.T, fs, window=window, nperseg=n_wind, noverlap=ovlp_num, return_onesided=True, boundary = None)
     s = np.transpose(s, (1, 2, 0))
     num_freqs = len(f)
     num_stft_times = len(T)
@@ -136,4 +136,6 @@ file_name = r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-17_04_23_22
 y_out, t_out, t0, f_peak, channel_trigger = extract_audio_events(file_name)
 play_events(y_out, 96000)
 
+
+#%%
 
