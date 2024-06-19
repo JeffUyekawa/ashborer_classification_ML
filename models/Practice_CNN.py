@@ -28,52 +28,8 @@ if torch.cuda.is_available():
 else:
     device='cpu'
 
-def print_stats(waveform, sample_rate=None, src=None):
-  if src:
-    print("-" * 10)
-    print("Source:", src)
-    print("-" * 10)
-  if sample_rate:
-    print("Sample Rate:", sample_rate)
-  print("Shape:", tuple(waveform.shape))
-  print("Dtype:", waveform.dtype)
-  print(f" - Max:     {waveform.max().item():6.3f}")
-  print(f" - Min:     {waveform.min().item():6.3f}")
-  print(f" - Mean:    {waveform.mean().item():6.3f}")
-  print(f" - Std Dev: {waveform.std().item():6.3f}")
-  print()
-  print(waveform)
-  print()
-import time
-def plot_waveform(waveform, sample_rate, title="Waveform", xlim=None, ylim=None):
-  
-  waveform = waveform.numpy()
-  
-  
-  num_channels, num_frames = waveform.shape
- 
-  time_axis = torch.arange(0, num_frames) / sample_rate
-
-  figure, axes = plt.subplots(num_channels, 1)
-  
-
- 
-  if num_channels == 1:
-    axes = [axes]
-  for c in range(num_channels):
-    axes[c].plot(time_axis, waveform[c], linewidth=1)
-    axes[c].grid(True)
-    if num_channels > 1:
-      axes[c].set_ylabel(f'Channel {c+1}')
-    if xlim:
-      axes[c].set_xlim(xlim)
-    if ylim:
-      axes[c].set_ylim(ylim)
-  figure.suptitle(title)
-  plt.show(block=False)
-
 def plot_specgram(waveform, sample_rate, title="Spectrogram", xlim=None):
-  waveform = waveform.numpy()
+  waveform = waveform.numpy().reshape(-1,1)
 
   num_channels, num_frames = waveform.shape
   time_axis = torch.arange(0, num_frames) / sample_rate
@@ -101,12 +57,6 @@ def play_audio(waveform, sample_rate):
   else:
     raise ValueError("Waveform with more than 2 channels are not supported.")
 
-def inspect_file(path):
-  print("-" * 10)
-  print("Source:", path)
-  print("-" * 10)
-  print(f" - File size: {os.path.getsize(path)} bytes")
-  print(f" - {ta.info(path)}")
 
 def plot_spectrogram(spec, title=None, ylabel='freq_bin', aspect='auto', xmax=None):
   fig, axs = plt.subplots(1, 1)
@@ -128,22 +78,30 @@ def plot_mel_fbank(fbank, title=None):
   plt.show(block=False)
 
 def get_spectrogram(
-    n_fft = 400,
-    win_len = None,
-    hop_len = None,
+    n_fft = 2048,
     power = 2.0,
     sample= None
 ):
   waveform = sample 
+  win_len = n_fft//2,
+  hop_len = n_fft,
+  n_fft = 256  # Window size
+  hop_length = n_fft // 2  # Hop length
+  win_length = n_fft  # Window length
+  window_fn = torch.hann_window  # Window function
+
+  # Create the Spectrogram transform
   spectrogram = T.Spectrogram(
       n_fft=n_fft,
-      win_length=win_len,
-      hop_length=hop_len,
-      center=True,
-      pad_mode="reflect",
-      power=power,
+      hop_length=hop_length,
+      win_length=win_length,
+      window_fn=window_fn,
+      power=2.0  # Power to which the magnitude spectrogram is scaled (1.0 for amplitude, 2.0 for power)
   )
-  return spectrogram(waveform)
+  
+  spec = spectrogram(waveform)
+  spec_db = 10 * torch.log10(spec + 1e-10)
+  return spec_db
 def get_melspectrogram(
     sample= None
 ):
@@ -155,149 +113,91 @@ def get_melspectrogram(
       center=True,
       pad_mode="reflect"
   )
+  spec = spectrogram(waveform)
   return spectrogram(waveform)
 
+#%%
+import os
+path=r"C:\Users\jeffu\Documents\Recordings\05_20_2024"
 
-
-path=r"C:\Users\jeffu\Documents\Recordings"
-name_set=set()
-for file in os.listdir(path):
-    if file.endswith('wav'):
-        name_set.add(file)
-print(len(name_set))
-
-t=os.path.join(path,list(name_set)[0])
+#from extractAudioEvents import extract_audio_events
+bad_recordings = ['2024-05-16_15_49_06.wav',
+ '2024-05-17_02_42_21.wav',
+ '2024-05-17_05_28_52.wav',
+ '2024-05-17_12_43_02.wav',
+ '2024-05-17_18_33_25.wav',
+ '2024-05-18_01_29_23.wav',
+ '2024-05-18_04_57_28.wav',
+ '2024-05-19_02_59_33.wav',
+ '2024-05-19_13_32_40.wav',
+ '2024-05-19_17_28_28.wav']
 
 #%%
-folder_path = "C:\\Users\\jeffu\\Documents\\Recordings"
-clusterlist = ['2024-05-16_10_53_13.wav',
- '2024-05-17_08_58_36.wav',
- '2024-05-17_09_04_39.wav',
- '2024-05-17_09_16_46.wav',
- '2024-05-17_10_23_28.wav',
- '2024-05-17_10_29_31.wav',
- '2024-05-17_11_12_02.wav',
- '2024-05-17_12_12_42.wav',
- '2024-05-17_12_36_58.wav',
- '2024-05-17_13_07_19.wav',
- '2024-05-17_13_13_23.wav',
- '2024-05-17_13_25_31.wav',
- '2024-05-17_13_49_47.wav',
- '2024-05-17_14_14_03.wav',
- '2024-05-17_14_20_10.wav',
- '2024-05-17_14_32_20.wav',
- '2024-05-17_14_56_36.wav',
- '2024-05-17_15_02_40.wav',
- '2024-05-17_15_08_44.wav',
- '2024-05-17_15_14_48.wav',
- '2024-05-17_15_20_52.wav',
- '2024-05-17_15_33_01.wav',
- '2024-05-17_15_39_04.wav',
- '2024-05-17_16_03_00.wav',
- '2024-05-17_16_21_12.wav',
- '2024-05-17_16_33_20.wav',
- '2024-05-17_16_45_30.wav',
- '2024-05-17_16_51_34.wav',
- '2024-05-17_16_57_38.wav',
- '2024-05-17_17_03_42.wav',
- '2024-05-17_18_09_28.wav',
- '2024-05-18_08_21_12.wav',
- '2024-05-18_10_03_38.wav',
- '2024-05-18_10_09_42.wav',
- '2024-05-18_11_40_21.wav',
- '2024-05-18_11_46_26.wav',
- '2024-05-18_11_52_29.wav',
- '2024-05-18_11_58_34.wav',
- '2024-05-18_12_04_37.wav',
- '2024-05-18_12_10_41.wav',
- '2024-05-18_12_16_46.wav',
- '2024-05-18_12_34_57.wav',
- '2024-05-18_12_47_06.wav',
- '2024-05-18_12_53_10.wav',
- '2024-05-18_13_17_26.wav',
- '2024-05-18_13_41_42.wav',
- '2024-05-18_15_48_30.wav',
- '2024-05-18_15_54_35.wav',
- '2024-05-18_16_18_51.wav',
- '2024-05-18_16_54_58.wav',
- '2024-05-18_17_13_13.wav',
- '2024-05-18_17_31_10.wav',
- '2024-05-19_08_30_13.wav',
- '2024-05-19_08_48_03.wav',
- '2024-05-19_09_12_19.wav',
- '2024-05-19_09_18_23.wav',
- '2024-05-19_09_48_22.wav',
- '2024-05-19_10_18_23.wav',
- '2024-05-19_10_42_42.wav',
- '2024-05-19_10_54_49.wav',
- '2024-05-19_11_13_02.wav',
- '2024-05-19_11_19_06.wav',
- '2024-05-19_11_49_31.wav',
- '2024-05-19_12_01_39.wav',
- '2024-05-19_12_19_51.wav',
- '2024-05-19_12_25_55.wav',
- '2024-05-19_12_31_59.wav',
- '2024-05-19_12_50_11.wav',
- '2024-05-19_13_08_24.wav',
- '2024-05-19_13_38_44.wav',
- '2024-05-19_13_44_48.wav',
- '2024-05-19_13_56_36.wav',
- '2024-05-19_14_51_19.wav',
- '2024-05-19_15_45_42.wav',
- '2024-05-19_15_57_51.wav',
- '2024-05-19_16_10_01.wav',
- '2024-05-19_16_21_48.wav',
- '2024-05-19_17_04_12.wav',
- '2024-05-19_17_22_24.wav',
- '2024-05-19_17_34_32.wav',
- '2024-05-19_17_40_36.wav',
- '2024-05-20_10_05_19.wav']
-full_paths = [os.path.join(folder_path, file) for file in clusterlist]
-for item in full_paths:
-  signal,sr=ta.load(item)
-  signal = signal[0,:].reshape((1,signal.shape[1]))
-  y_min = float(signal.min())
-  y_max = float(signal.max())
-  cushion = 0.1*(max([np.abs(y_min),np.abs(y_max)]))
-  y_lim = (y_min - cushion, y_max + cushion)
-  plot_waveform(signal,sr, title = item, ylim=y_lim)
+import sys
+# caution: path[0] is reserved for script path (or '' in REPL)
+sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
+
+from LabelEvents import label_audio_events
+
+audio_dict = {}
+
+
+mel_list = []
+label_list = []
+for j, file in enumerate(os.listdir(path)):
+   
+   if file not in bad_recordings:
+    full_path = os.path.join(path,file)
+    signal,sr = ta.load(full_path)
+    signal = signal[0,:]
+    for i in np.arange(int(signal.shape[0]/sr)):
+        start = i*sr
+        end = (i+1)*sr
+        clip = signal[start:end]
+        gram = get_spectrogram(sample = clip)
+        plt.imshow(gram)
+        mel_list.append(gram)
+        if label_audio_events(clip,sr) ==0:
+           label_list.append(0)
+        else:
+           label_list.append(1)
+
+   
+
+#%%
+import pickle
+'''audio_dict['Spectrogram'] = mel_list
+audio_dict['Label'] = label_list
+
+with open('audio_data_ver1.pickle', 'wb') as handle:
+    pickle.dump(audio_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+'''
+with open('audio_data_ver1.pickle', 'rb') as handle:
+    b = pickle.load(handle)
 # %%
+
+df = pd.DataFrame(b)
+
+#%%
+from time import time
+
+from sklearn.metrics import accuracy_score, log_loss
+from sklearn.model_selection import train_test_split
 
 class AshBorerDataset(Dataset):
 
-    def __init__(self,audio_path,label_path,transformation,target_sample_rate,num_samples,device):
-        name_set=set()
-        for file in os.listdir(audio_path):
-            if file.endswith('wav'):
-                name_set.add(file)
-        name_set=list(name_set)
-        self.datalist=name_set
-        self.audio_path=audio_path
-        self.label_path=label_path
-        self.device=device
-        self.transformation=transformation.to(device)
-        self.target_sample_rate=target_sample_rate
-        self.num_samples=num_samples
+    def __init__(self,x,y):
+        
+        self.num_samples=len(x)
+        self.x_data = x
+        self.y_data = y
         
     def __len__(self):
-        return len(self.datalist)
+        return self.num_samples
 
     def __getitem__(self,idx):
-        audio_file_path=os.path.join(self.audio_path,self.datalist[idx])
-        label_file_path=os.path.join(self.label_path,self.datalist[idx][:-4]+'.json')
-        with open(label_file_path,'r') as f:
-            content=json.loads(f.read())
-            f.close()
-        label=content['cough_detected']
-        waveform,sample_rate=ta.load(audio_file_path) #(num_channels,samples) -> (1,samples) makes the waveform mono
-        waveform=waveform.to(self.device)
-        waveform=self._resample(waveform,sample_rate)   
-        waveform=self._mix_down(waveform)
-        waveform=self._cut(waveform)
-        waveform=self._right_pad(waveform)
-        waveform=self.transformation(waveform)
-        return waveform,float(label)
-      
+        return self.x_data[idx], self.y_data[idx]
+    ''' 
     def _resample(self,waveform,sample_rate):
         # used to handle sample rate
         resampler=ta.transforms.Resample(sample_rate,self.target_sample_rate)
@@ -321,7 +221,7 @@ class AshBorerDataset(Dataset):
             num_padding=self.num_samples-signal_length
             last_dim_padding=(0,num_padding) # first arg for left second for right padding. Make a list of tuples for multi dim
             waveform=torch.nn.functional.pad(waveform,last_dim_padding)
-        return waveform
+        return waveform'''
 
 
 class CNNNetwork(nn.Module):
@@ -365,202 +265,178 @@ class CNNNetwork(nn.Module):
         
         return output
       
-model=CNNNetwork().cuda()
 
 
+class EarlyStopping:
+    """Early stops the training if validation loss doesn't improve after a given patience."""
+    def __init__(self, patience=7, verbose=False, delta=0, path='AshBorercheckpoint.pt', trace_func=print):
+        """
+        Args:
+            patience (int): How long to wait after last time validation loss improved.
+                            Default: 7
+            verbose (bool): If True, prints a message for each validation loss improvement. 
+                            Default: False
+            delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+                            Default: 0
+            path (str): Path for the checkpoint to be saved to.
+                            Default: 'checkpoint.pt'
+            trace_func (function): trace print function.
+                            Default: print            
+        """
+        self.patience = patience
+        self.verbose = verbose
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = np.Inf
+        self.delta = delta
+        self.path = path
+        self.trace_func = trace_func
+    def __call__(self, val_loss, model):
 
-def train_single_epoch(model,dataloader,loss_fn,optimizer,device):
-    for waveform,label in tqdm.tqdm(dataloader):
-        waveform=waveform.to(device)
-        # label=pt.from_numpy(numpy.array(label))
-        label=label.to(device)
-        # calculate loss and preds
-        logits=model(waveform)
-        loss=loss_fn(logits.float(),label.float().view(-1,1))
-        # backpropogate the loss and update the gradients
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    print(f"loss:{loss.item()}")
+        score = -val_loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.save_checkpoint(val_loss, model)
+            self.counter = 0
+
+    def save_checkpoint(self, val_loss, model):
+        '''Saves model when validation loss decrease.'''
+        if self.verbose:
+            self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+        torch.save(model.state_dict(), self.path)
+        self.val_loss_min = val_loss
+        
+def train_model(mod,num_epochs):
+    start =time()
+    print('Starting Training \n ----------------------------------------')
+    model = mod
+    train_loss = []
+    test_loss = []
+    train_r2 = []
+    test_r2 = []
     
-def train(model,dataloader,loss_fn,optimizer,device,epochs):
-    for i in tqdm.tqdm(range(epochs)):
-        print(f"epoch:{i+1}")
-        train_single_epoch(model,dataloader,loss_fn,optimizer,device)
-        print('-------------------------------------------')
-    print('Finished Training')
-
-audio_path='Path Where .wav files are stored'
-label_path='Path Where json files are stored'
-SAMPLE_RATE=22050
-NUM_SAMPLES=22050
-BATCH_SIZE=128
-EPOCHS=1
-
-melspectogram=ta.transforms.MelSpectrogram(sample_rate=SAMPLE_RATE,n_fft=1024,hop_length=512,n_mels=64)
-coughvid_dataset=AshBorerDataset(audio_path,label_path,melspectogram,SAMPLE_RATE,NUM_SAMPLES,device)
-train_dataloader=DataLoader(coughvid_dataset,batch_size=BATCH_SIZE,shuffle=True)
-
-loss_fn=torch.nn.BCELoss()
-optimizer=torch.optim.adam(model.parameters(),lr=0.1)
-
-train(model,train_dataloader,loss_fn,optimizer,device,EPOCHS)
-
-
-waveform,label=coughvid_dataset[0]
-
-def predict(model,inputs,labels):
-    model.eval()
-    inputs=torch.unsqueeze(inputs,0)
-    with torch.no_grad():
-        predictions=model(inputs)
-    return predictions,labels
-  
-prediction,label=predict(model,waveform,label)
-print(prediction,label)
-
-
-
+    early_stopping = EarlyStopping(patience=5, verbose=True)
+    for epoch in range(num_epochs):
+        if epoch % 10 == 9 or epoch == num_epochs-1 or epoch == 0:
+                print(f'Epoch {epoch+1} \n---------------------')
+        model.train()
+        for j,(inputs, labels) in enumerate(train_loader):
+            y_pred = model(inputs)
+            loss = loss_fn(y_pred, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            if epoch % 10 == 9 or epoch == num_epochs-1 or epoch == 0:
+                if (j+1) % 10 == 0:
+                    print(f'Step {j+1}| Loss = {loss.item():.3f}')
+    #if epoch % 5 == 0:
+        model.eval()
+        with torch.no_grad():
+            y_pred1 = model(X_train)
+            y_pred2 = model(X_test)
+        
+        
+            train_loss.append(log_loss(y_pred1.cpu(),y_train.cpu()))
+            test_loss.append(log_loss(y_pred2.cpu(),y_test.cpu()))
+            train_r2.append(accuracy_score(y_train.cpu(),y_pred1.cpu()))
+            test_r2.append(accuracy_score(y_test.cpu(),y_pred2.cpu()))
+        
+        valid_loss = test_loss[-1]
+        early_stopping(valid_loss,model)
+        if early_stopping.early_stop:
+            print('Early stopping')
+            break
+    model.load_state_dict(torch.load('Deep1L10checkpoint.pt'))
+    end = time()
+    print(f'Training Complete, {epoch} epochs: Time Elapsed: {(end-start)//60} minutes, {(end-start)%60} seconds')
+    return model, train_loss, test_loss, train_r2, test_r2
+       
 
 #%%
-#CIFAR 10 Practice
-import matplotlib.pyplot as plt # for plotting
-import numpy as np # for transformation
-
-import torch # PyTorch package
-import torchvision # load datasets
-import torchvision.transforms as transforms # transform data
-import torch.nn as nn # basic building block for neural neteorks
-import torch.nn.functional as F # import convolution functions like Relu
-import torch.optim as optim # optimzer
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print('Using device:', device)
 
 
-transform = transforms.Compose( # composing several transforms together
-    [transforms.ToTensor(), # to tensor object
-     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) # mean = 0.5, std = 0.5
 
-# set batch_size
-batch_size = 4
+overallloss=[]
+overallacc = []
 
-# set number of workers
-num_workers = 0
+for i,(train,test) in enumerate(cv.split(X,y)):
+    ## data setup
+    X_train = X.iloc[train]
+    X_test = X.iloc[test]
+    y_train = y.iloc[train]
+    y_test = y.iloc[test]
+   
+    #Convert x and y to tensors
+    y_train = torch.Tensor(y_train.values).reshape(-1,1)
+    y_test = torch.Tensor(y_test.values).reshape(-1,1)
+    #Scale data
+    x_scaler = StandardScaler()
+    X_train = x_scaler.fit_transform(X_train)
+    X_test = x_scaler.transform(X_test)
 
-# load train data
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                          shuffle=True, num_workers=num_workers)
+    X_train =torch.from_numpy(X_train.astype(np.float32))
+    X_test = torch.from_numpy(X_test.astype(np.float32))
+    
+    model = CNNNetwork(X_train.shape[1])
+    loss_fn = nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(),lr =.0001, weight_decay = 0.0)
+    
+    if torch.cuda.is_available():
+        X_train = X_train.cuda()
+        X_test = X_test.cuda()
+        y_train = y_train.cuda()
+        y_test = y_test.cuda()
+        model=model.cuda()
+        
+    train_data = AshBorerDataset(X_train,y_train)
+    train_loader = DataLoader(dataset=train_data,
+                            batch_size=128,
+                            shuffle=True,
+                            num_workers=0,
+                            )
+    #Can change if using gpu for parallel computing)
+    #Training Loop (Very, Very slow, so only do 100 epochs until using HPC)
+    
+    
 
-# load test data
-testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-                                       download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                         shuffle=False, num_workers=num_workers)
-
-# put 10 classes into a set
-classes = ('plane', 'car', 'bird', 'cat',
-           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-def imshow(img):
-  ''' function to show image '''
-  img = img / 2 + 0.5 # unnormalize
-  npimg = img.numpy() # convert to numpy objects
-  plt.imshow(np.transpose(npimg, (1, 2, 0)))
-  plt.show()
-
-# get random training images with iter function
-dataiter = iter(trainloader)
-images, labels = next(dataiter)
-
-# call function on our images
-imshow(torchvision.utils.make_grid(images))
-
-# print the class of the image
-print(' '.join('%s' % classes[labels[j]] for j in range(batch_size)))
+    model, train_loss, test_loss, train_r2, test_r2 = train_model(model,1000)
+    
+    with torch.no_grad():
+        y_pred = model(X_test)
+        score = accuracy_score(y_pred=y_pred.cpu(),y_true=y_test.cpu())
+        score2 = accuracy_score(y_pred=model(X_train).cpu(),y_true=y_train.cpu())
+        loss = log_loss(y_pred=y_pred.cpu(),y_true=y_test.cpu())
+        overallloss.append(loss)
+        overallacc.append(score)
+    print(f'\nFold {i}:\n----------\nR2 train score: {score2}\nR2 test Score: {score}\nMSE: {mse}' )
+print(f'Average MSE: {np.mean(overallloss)}, Average R2: {np.mean(overallacc)}')
 # %%
-
-class Net(nn.Module):
-  def __init__(self):
-
-      super(Net, self).__init__()
-  # 3 input image channel, 6 output channels, 
-  # 5x5 square convolution kernel
-      self.conv1 = nn.Conv2d(3, 6, 5)
-  # Max pooling over a (2, 2) window
-      self.pool = nn.MaxPool2d(2, 2)
-      self.conv2 = nn.Conv2d(6, 16, 5) 
-      self.fc1 = nn.Linear(16 * 5 * 5, 120)# 5x5 from image dimension
-      self.fc2 = nn.Linear(120, 84)
-      self.fc3 = nn.Linear(84, 10)
-
-  def forward(self, x):
-
-      x = self.pool(F.relu(self.conv1(x)))
-      x = self.pool(F.relu(self.conv2(x)))
-      x = x.view(-1, 16 * 5 * 5)
-      x = F.relu(self.fc1(x))
-      x = F.relu(self.fc2(x))
-      x = self.fc3(x)
-      return x
-
-net = Net()
-print(net)
-# %%
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-# %%
-import time
-start = time.time()
-
-for epoch in range(2):  # loop over the dataset multiple times
-
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
-
-        # zero the parameter gradients
-        optimizer.zero_grad()
-
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        # print statistics
-        running_loss += loss.item()
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
-            running_loss = 0.0
-
-end = time.time()
-print(f'Training Complete: {end-start} seconds')
-
-
-# %%
-dataiter = iter(testloader)
-images, labels = next(dataiter)
-
-# print images
-imshow(torchvision.utils.make_grid(images))
-print('GroundTruth: ', ' '.join('%s' % classes[labels[j]] for j in range(4)))
-# %%
-
-
-correct = 0
-total = 0
 with torch.no_grad():
-    for data in testloader:
-        images, labels = data
-        outputs = net(images)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
+    fig,axs = plt.subplots(2,2)
 
-print('Accuracy of the network on the 10000 test images: %d %%' % (
-    100 * correct / total))
+    axs[0][0].plot(train_loss, label= 'Training Loss')
+    axs[0][0].legend()
+    axs[0][1].plot(test_loss, 'r', label = 'Test Loss'  )
+    axs[0][1].legend()
 
-# %%
+
+    axs[1][0].plot(train_r2, label = 'Train R2')
+    axs[1][0].legend()
+    axs[1][1].plot(test_r2, 'r', label = 'Test R2')
+    axs[1][1].legend()
+
+    fig.savefig('1Layer.png')
+    overallloss.append(np.mean(overallloss))
+    overallacc.append(np.mean(overallacc))
