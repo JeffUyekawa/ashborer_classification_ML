@@ -183,53 +183,67 @@ from time import time
 
 from sklearn.metrics import accuracy_score, log_loss
 from sklearn.model_selection import train_test_split
+from torchvision import datasets, transforms
 
-class AshBorerDataset(Dataset):
+# see https://pytorch.org/audio/stable/transforms.html
+transform=transforms.ToTensor()
+path = r"C:\Users\jeffu\Documents\Recordings\05_20_2024_Images"
 
-    def __init__(self,x,y):
-        
-        self.num_samples=len(x)
-        self.x_data = x
-        self.y_data = y
-        
-    def __len__(self):
-        return self.num_samples
+# Load the dataset
+print(f"Loading images from dataset path")
+dataset = datasets.ImageFolder(path, transform=transform)
 
-    def __getitem__(self,idx):
-        return self.x_data[idx], self.y_data[idx]
-    ''' 
-    def _resample(self,waveform,sample_rate):
-        # used to handle sample rate
-        resampler=ta.transforms.Resample(sample_rate,self.target_sample_rate)
-        return resampler(waveform)
-    
-    def _mix_down(self,waveform):
-        # used to handle channels
-        waveform=torch.mean(waveform,dim=0,keepdim=True)
-        return waveform
-    
-    def _cut(self,waveform):
-        # cuts the waveform if it has more than certain samples
-        if waveform.shape[1]>self.num_samples:
-            waveform=waveform[:,:self.num_samples]
-        return waveform
-    
-    def _right_pad(self,waveform):
-        # pads the waveform if it has less than certain samples
-        signal_length=waveform.shape[1]
-        if signal_length<self.num_samples:
-            num_padding=self.num_samples-signal_length
-            last_dim_padding=(0,num_padding) # first arg for left second for right padding. Make a list of tuples for multi dim
-            waveform=torch.nn.functional.pad(waveform,last_dim_padding)
-        return waveform'''
+# train / test split
+val_ratio = 0.2
+val_size = int(val_ratio * len(dataset))
+train_size = len(dataset) - val_size
+train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+print(f"{train_size} images for training, {val_size} images for validation")
+#%%
+from torchvision import utils
+def image_display_spectrogram(img, one_channel=False):
+    if one_channel:
+        img = img.mean(dim=0)
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    if one_channel:
+        plt.imshow(npimg, cmap="Greys")
+    else:
+        plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
+"""
+Display all the spectrogram of sounds within a batch
+@param batches: Batch of data from a dataloader 
+"""
+def batches_display(batches):
+    dataiter = iter(batches)
+    images, _ = next(dataiter)
+    # create grid of images
+    img_grid = utils.make_grid(images)
+    # show images
+    image_display_spectrogram(img_grid, one_channel=False)
 
+batch_size = 16
+NUM_WORKERS = 0
+# Load training dataset into batches
+train_batches = torch.utils.data.DataLoader(train_dataset,
+                                           batch_size=batch_size,
+                                           shuffle=True,
+                                           num_workers=NUM_WORKERS)
+# Load validation dataset into batches
+val_batches = torch.utils.data.DataLoader(val_dataset,
+                                         batch_size=batch_size*2,
+                                         num_workers=NUM_WORKERS)
+
+# display 32 (batch_size*2) sample from the first validation batch
+batches_display(val_batches)
+#%%
 class CNNNetwork(nn.Module):
 
     def __init__(self):
         super().__init__()
         self.conv1=nn.Sequential(
-            nn.Conv2d(in_channels=1,out_channels=16,kernel_size=3,stride=1,padding=2),
+            nn.Conv2d(in_channels=3,out_channels=16,kernel_size=3,stride=1,padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
@@ -249,7 +263,7 @@ class CNNNetwork(nn.Module):
             nn.MaxPool2d(kernel_size=2)
         )
         self.flatten=nn.Flatten()
-        self.linear1=nn.Linear(in_features=128*5*4,out_features=128)
+        self.linear1=nn.Linear(in_features=88320,out_features=128)
         self.linear2=nn.Linear(in_features=128,out_features=1)
         self.output=nn.Sigmoid()
     
@@ -320,18 +334,22 @@ def train_model(mod,num_epochs):
     start =time()
     print('Starting Training \n ----------------------------------------')
     model = mod
-    train_loss = []
-    test_loss = []
-    train_r2 = []
-    test_r2 = []
+    avg_train_loss = []
+    avg_test_loss = []
+    avg_train_acc = []
+    avg_test_acc = []
     
-    early_stopping = EarlyStopping(patience=5, verbose=True)
+    early_stopping = EarlyStopping(patience=2, verbose=True)
     for epoch in range(num_epochs):
         if epoch % 10 == 9 or epoch == num_epochs-1 or epoch == 0:
                 print(f'Epoch {epoch+1} \n---------------------')
         model.train()
+        train_loss=[]
+        train_acc=[]
         for j,(inputs, labels) in enumerate(train_loader):
-            y_pred = model(inputs)
+            y_pred = model(inputs).reshape(-1,1).float()
+            guess = (y_pred>0.5)*1
+            labels = labels.reshape(-1,1).float()
             loss = loss_fn(y_pred, labels)
             optimizer.zero_grad()
             loss.backward()
@@ -339,17 +357,23 @@ def train_model(mod,num_epochs):
             if epoch % 10 == 9 or epoch == num_epochs-1 or epoch == 0:
                 if (j+1) % 10 == 0:
                     print(f'Step {j+1}| Loss = {loss.item():.3f}')
+            with torch.no_grad():
+                train_loss.append(log_loss(y_true=labels.cpu(), y_pred = y_pred.cpu(),labels=[0,1]))
+                train_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess.cpu()))
+        avg_train_loss.append(np.average(train_loss))
+        avg_train_acc.append(np.average(train_acc))
     #if epoch % 5 == 0:
         model.eval()
         with torch.no_grad():
-            y_pred1 = model(X_train)
-            y_pred2 = model(X_test)
-        
-        
-            train_loss.append(log_loss(y_pred1.cpu(),y_train.cpu()))
-            test_loss.append(log_loss(y_pred2.cpu(),y_test.cpu()))
-            train_r2.append(accuracy_score(y_train.cpu(),y_pred1.cpu()))
-            test_r2.append(accuracy_score(y_test.cpu(),y_pred2.cpu()))
+            test_loss = []
+            test_acc = []
+            for i, (inputs,labels) in enumerate(val_loader):
+                y_pred2 = model(inputs).reshape(-1,1).float()
+                guess_2 = (y_pred2>=0.5)*1
+                labels = labels.reshape(-1,1).float()
+                
+            test_loss.append(log_loss(y_pred=y_pred2.cpu(),y_true=labels.cpu(),labels=[0,1]))
+            test_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess_2.cpu()))
         
         valid_loss = test_loss[-1]
         early_stopping(valid_loss,model)
@@ -362,6 +386,7 @@ def train_model(mod,num_epochs):
     return model, train_loss, test_loss, train_r2, test_r2
        
 
+
 #%%
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
@@ -369,59 +394,31 @@ print('Using device:', device)
 
 
 overallloss=[]
-overallacc = []
+overallacc=[]
+model = CNNNetwork()
+loss_fn = nn.BCELoss()
+optimizer = torch.optim.Adam(model.parameters(),lr =.003, weight_decay = 0.0)
 
-for i,(train,test) in enumerate(cv.split(X,y)):
-    ## data setup
-    X_train = X.iloc[train]
-    X_test = X.iloc[test]
-    y_train = y.iloc[train]
-    y_test = y.iloc[test]
-   
-    #Convert x and y to tensors
-    y_train = torch.Tensor(y_train.values).reshape(-1,1)
-    y_test = torch.Tensor(y_test.values).reshape(-1,1)
-    #Scale data
-    x_scaler = StandardScaler()
-    X_train = x_scaler.fit_transform(X_train)
-    X_test = x_scaler.transform(X_test)
 
-    X_train =torch.from_numpy(X_train.astype(np.float32))
-    X_test = torch.from_numpy(X_test.astype(np.float32))
-    
-    model = CNNNetwork(X_train.shape[1])
-    loss_fn = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(),lr =.0001, weight_decay = 0.0)
-    
-    if torch.cuda.is_available():
-        X_train = X_train.cuda()
-        X_test = X_test.cuda()
-        y_train = y_train.cuda()
-        y_test = y_test.cuda()
-        model=model.cuda()
-        
-    train_data = AshBorerDataset(X_train,y_train)
-    train_loader = DataLoader(dataset=train_data,
-                            batch_size=128,
-                            shuffle=True,
-                            num_workers=0,
-                            )
-    #Can change if using gpu for parallel computing)
-    #Training Loop (Very, Very slow, so only do 100 epochs until using HPC)
-    
-    
 
-    model, train_loss, test_loss, train_r2, test_r2 = train_model(model,1000)
-    
-    with torch.no_grad():
-        y_pred = model(X_test)
-        score = accuracy_score(y_pred=y_pred.cpu(),y_true=y_test.cpu())
-        score2 = accuracy_score(y_pred=model(X_train).cpu(),y_true=y_train.cpu())
-        loss = log_loss(y_pred=y_pred.cpu(),y_true=y_test.cpu())
-        overallloss.append(loss)
-        overallacc.append(score)
-    print(f'\nFold {i}:\n----------\nR2 train score: {score2}\nR2 test Score: {score}\nMSE: {mse}' )
-print(f'Average MSE: {np.mean(overallloss)}, Average R2: {np.mean(overallacc)}')
+train_loader = DataLoader(dataset=train_dataset,
+                        batch_size=128,
+                        shuffle=True,
+                        num_workers=0,
+                        )
+val_loader = DataLoader(dataset = val_dataset,
+                        batch_size=128,
+                        shuffle = True,
+                        num_workers = 0)
+#Can change if using gpu for parallel computing)
+#Training Loop (Very, Very slow, so only do 100 epochs until using HPC)
+
+
+
+model, train_loss, test_loss, train_r2, test_r2 = train_model(model,1000)
+
+
+
 # %%
 with torch.no_grad():
     fig,axs = plt.subplots(2,2)
