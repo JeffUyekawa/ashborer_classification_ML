@@ -339,7 +339,7 @@ def train_model(mod,num_epochs):
     avg_train_acc = []
     avg_test_acc = []
     
-    early_stopping = EarlyStopping(patience=2, verbose=True)
+    early_stopping = EarlyStopping(patience=1, verbose=True)
     for epoch in range(num_epochs):
         if epoch % 10 == 9 or epoch == num_epochs-1 or epoch == 0:
                 print(f'Epoch {epoch+1} \n---------------------')
@@ -371,19 +371,21 @@ def train_model(mod,num_epochs):
                 y_pred2 = model(inputs).reshape(-1,1).float()
                 guess_2 = (y_pred2>=0.5)*1
                 labels = labels.reshape(-1,1).float()
+                test_loss.append(log_loss(y_pred=y_pred2.cpu(),y_true=labels.cpu(),labels=[0,1]))
+                test_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess_2.cpu()))
                 
-            test_loss.append(log_loss(y_pred=y_pred2.cpu(),y_true=labels.cpu(),labels=[0,1]))
-            test_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess_2.cpu()))
+            avg_test_loss.append(log_loss(y_pred=y_pred2.cpu(),y_true=labels.cpu(),labels=[0,1]))
+            avg_test_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess_2.cpu()))
         
         valid_loss = test_loss[-1]
         early_stopping(valid_loss,model)
         if early_stopping.early_stop:
             print('Early stopping')
             break
-    model.load_state_dict(torch.load('Deep1L10checkpoint.pt'))
+    model.load_state_dict(torch.load('AshBorercheckpoint.pt'))
     end = time()
     print(f'Training Complete, {epoch} epochs: Time Elapsed: {(end-start)//60} minutes, {(end-start)%60} seconds')
-    return model, train_loss, test_loss, train_r2, test_r2
+    return model, avg_train_loss, avg_test_loss, avg_train_acc, avg_test_acc
        
 
 
@@ -397,7 +399,7 @@ overallloss=[]
 overallacc=[]
 model = CNNNetwork()
 loss_fn = nn.BCELoss()
-optimizer = torch.optim.Adam(model.parameters(),lr =.003, weight_decay = 0.0)
+optimizer = torch.optim.Adam(model.parameters(),lr =.00001, weight_decay = 0.0)
 
 
 
@@ -429,11 +431,12 @@ with torch.no_grad():
     axs[0][1].legend()
 
 
-    axs[1][0].plot(train_r2, label = 'Train R2')
+    axs[1][0].plot(train_r2, label = 'Train Acc')
     axs[1][0].legend()
-    axs[1][1].plot(test_r2, 'r', label = 'Test R2')
+    axs[1][1].plot(test_r2, 'r', label = 'Test Acc')
     axs[1][1].legend()
-
+'''
     fig.savefig('1Layer.png')
     overallloss.append(np.mean(overallloss))
-    overallacc.append(np.mean(overallacc))
+    overallacc.append(np.mean(overallacc))'''
+# %%
