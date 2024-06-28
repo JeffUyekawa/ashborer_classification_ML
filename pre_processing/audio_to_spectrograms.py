@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 
-SPECTROGRAM_DPI = 90 # image quality of spectrograms
+SPECTROGRAM_DPI = 300 # image quality of spectrograms
 DEFAULT_SAMPLE_RATE = 44100
 DEFAULT_HOP_LENGHT = 1024
 
@@ -38,7 +38,6 @@ from LabelEvents import label_audio_events
 
 path=r"C:\Users\jeffu\Documents\Recordings\05_20_2024"
 
-#from extractAudioEvents import extract_audio_events
 bad_recordings = ['2024-05-16_15_49_06.wav',
  '2024-05-17_02_42_21.wav',
  '2024-05-17_05_28_52.wav',
@@ -56,10 +55,10 @@ output = path + "_Images"
 
 for j, file in enumerate(os.listdir(path)):
    
-   if file not in bad_recordings:
-    full_path = os.path.join(path,file)
-    signal,sr = ta.load(full_path)
-    signal = signal[0,:]
+    if file not in bad_recordings:
+        full_path = os.path.join(path,file)
+        signal,sr = ta.load(full_path)
+        signal = signal[0,:]
     
     for i in np.arange(int(signal.shape[0]/sr)):
         
