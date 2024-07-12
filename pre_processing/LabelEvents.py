@@ -3,15 +3,21 @@ import os
 import numpy as np
 import soundfile as sf
 import sounddevice as sd
-from scipy.signal import stft
+from scipy.signal import stft, butter, filtfilt
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import pdist
 
 def label_audio_events(audio,samp):
     y, fs = audio, samp
-    y = y.numpy().reshape(-1,1)
+    if str(type(y)) == "<class 'torch.Tensor'>":
+        y = y.numpy().reshape(-1,1)
+    elif y.shape[1] > 1:
+         y = y[:,0].reshape(-1,1)
+    else:
+  
+        y = y.reshape(-1,1)
     f_nyquist = fs / 2
-    num_channels = y.shape[1]
+    num_channels = 1
     num_samps = y.shape[0]
     t = np.arange(num_samps) / fs
 
@@ -27,7 +33,8 @@ def label_audio_events(audio,samp):
     num_stft_times = len(T)
     psd_factor = 1 / fs * 1 / np.sum(window**2)
     psd_db = 10 * np.log10(psd_factor * np.abs(s)**2)
-
+    #experimental
+  
     median_noise_pow_db = np.median(10 * np.log10(np.abs(s)**2), axis=1)
     real_stft_std = np.std(np.real(s), axis=1)
     imag_stft_std = np.std(np.imag(s), axis=1)
@@ -95,7 +102,7 @@ def label_audio_events(audio,samp):
     y_out = [None] * num_clusters
     t_out = [None] * num_clusters
 
-    time_pad = 2
+    time_pad = .1
 
     for i in range(num_clusters):
         t0[i] = t_clusters[i, 0]
@@ -110,10 +117,60 @@ def label_audio_events(audio,samp):
     f_peak = f_peak[ind_sort]
     t_out = [t_out[i] for i in ind_sort]
 
-    return len(y_out)
+    return t_out, y_out
 
+path = r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-16_16_55_29.wav"
+path = r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-16_16_31_13.wav"
+y, fs = sf.read(path)
+def bandpass_filter(data,fs, lowcut=1000, highcut=17000, order=5, pad = 0):
+    nyquist = 0.5 * fs
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = butter(order, [low, high], btype='band')
+    y = filtfilt(b,a,data, padlen=pad)
+    return y
 
+y=y[:,0]
+y=y/np.max(np.abs(y))
+y = bandpass_filter(data=y,fs=fs)
+y=y.reshape(-1,1)
+t_out, y_out = label_audio_events(y,fs)
 
 
 #%%
+import matplotlib.pyplot as plt
+t = np.arange(y.shape[0])/fs
+start = int(19.64*fs)
+end = int(19.65*fs)
+print(len(y[:,0]))
+plt.plot(t,y[:,0])
 
+for ts,ys in zip(t_out,y_out):
+    plt.plot(ts,ys,color='r')
+plt.legend()
+plt.show()
+
+# %%
+import IPython.display as ipd
+y=y[:,0]
+ipd.Audio(data=y, rate=fs)
+# %%
+import librosa
+y,fs = sf.read(path)
+y=y[:,0]
+y = y/np.max(np.abs(y))
+y=y.reshape(-1,1)
+t_wind = 0.05
+n_wind = int(np.ceil(t_wind * fs))
+ovlp_frac = 0.75
+ovlp_num = int(np.ceil(n_wind * ovlp_frac))
+
+window = np.kaiser(n_wind, 5)  # Use numpy to create Kaiser window
+f, T, s = stft(y.T, fs, window=window, nperseg=n_wind, noverlap=ovlp_num, return_onesided=True, boundary = None)
+s = np.transpose(s, (1, 2, 0))
+s=s[:,:,0]
+psd_factor = 1 / fs * 1 / np.sum(window**2)
+psd_db = 10 * np.log10(psd_factor * np.abs(s)**2)
+tester = psd_db[400:,:]
+librosa.display.specshow(psd_db,x_axis='time',y_axis='log',sr=fs)
+# %%

@@ -16,9 +16,10 @@ sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Pro
 from LabelEvents import label_audio_events
 
 
-path1=r"C:\Users\jeffu\Documents\Recordings\06_27_2024_R1\2024-06-24_18_35_57.wav"
+path1=r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-17_04_23_22.wav"
 y, fs = sf.read(path1)
 y = y/np.max(np.abs(y))
+y = y[:,0]
 sd.play(y,fs)
 #%%
 t = np.arange(len(y))/fs
