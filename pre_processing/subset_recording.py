@@ -65,33 +65,60 @@ def bandpass_filter(data,fs, lowcut=1000, highcut=12000, order=5, pad = 0):
     y = filtfilt(b,a,data, padlen=pad)
     return y
 
+def verify_event(y,fs, start,end):
+    buff_start = max(start - 24000,0)
+    buff_end = min(end + 24000, 1440000)
+
+    filt = bandpass_filter(data=y,fs=fs)
+    t = np.arange(len(y))/fs
+
+    clip = filt[buff_start:buff_end]
+    t_clip = t[buff_start:buff_end]
+
+    event = filt[start:end]
+    t_event = t[start:end]
+
+    plt.plot(t_clip,clip)
+    plt.plot(t_event,event, 'r')
+    plt.show()
+    check = 2
+    while check ==2:
+        sd.play(y[buff_start:buff_end],fs)
+        check = int(input('0: no event, 1: event, 2:replay'))
+    return check
+
 file_names = []
 start_times = []
 end_times = []
 auto_label = []
 rolls=[]
 thresh = 0.3
-win_time = 0.01
-for file in os.listdir(test_path):
+win_time = 0.05
+for i,file in enumerate(os.listdir(test_path)):
     full_path = os.path.join(test_path,file)
     y, fs = sf.read(full_path)
     if y.shape[1] > 1:
         y = y[:,0]
     y = y/np.max(np.abs(y))
-    y = bandpass_filter(y,fs=fs)
+    filt = bandpass_filter(y,fs=fs)
     for i in np.arange(int(len(y)/(fs*win_time))):
         start = int(i*(fs*win_time))
         end = int((i+1)*fs*win_time)
-        clip = np.array(y[start:end])
-        for j in range(49):
-            new = np.roll(clip,j*10)
-            file_names.append(file)
-            start_times.append(start)
-            end_times.append(end)
-            rolls.append(j*48)
-            if (np.max(np.abs(new)) > thresh):
-                auto_label.append(1)
-            else:
+        clip = np.array(filt[start:end])
+        if np.max(np.abs(clip)) > thresh:
+            check = verify_event(y,fs,start,end)
+            for j in range(5*48+1):
+                file_names.append(file)
+                start_times.append(start)
+                end_times.append(end)
+                rolls.append(j*10)
+                auto_label.append(check)
+        else:
+            if i%5==0: 
+                file_names.append(file)
+                start_times.append(start)
+                end_times.append(end)
+                rolls.append(0)
                 auto_label.append(0)
 
 
@@ -100,10 +127,19 @@ for file in os.listdir(test_path):
 import pandas as pd
 labeled_data = {'File': file_names, 'Start': start_times, 'End': end_times, 'Roll Amount': rolls, 'Label': auto_label}
 df = pd.DataFrame(labeled_data)
+num_samps = df.shape[0]
+num_pos = df[df['Label'].eq(1)].shape[0]
 N = df.shape[0]-2*df[df['Label'].eq(1)].shape[0]
-df1 = df.drop(df[df['Label'].eq(0)].sample(N).index)
-df1.reset_index(drop=True,inplace=True)
+if N > 0:
+    df1 = df.drop(df[df['Label'].eq(0)].sample(N).index)
+    df1.reset_index(drop=True,inplace=True)
+    print('Dropping negatives')
+else:
+    df.reset_index(drop=True, inplace=True)
+    df1=df
+    print('No need to drop')
 #%%
 df1.to_csv(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\val_data_info.csv",index=False)
+
 
 # %%
