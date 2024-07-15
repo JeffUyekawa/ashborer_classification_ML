@@ -54,9 +54,16 @@ select_random_files(path,bad_recordings,target1,20)
 sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
 train_path = r"C:\Users\jeffu\Documents\Recordings\recordings_for_train"
 test_path = r"C:\Users\jeffu\Documents\Recordings\recordings_for_test"
-from LabelEvents import label_audio_events
-from peak_finder import detect_peaks, bandpass_filter
+from scipy.signal import butter, filtfilt
 import librosa
+
+def bandpass_filter(data,fs, lowcut=1000, highcut=12000, order=5, pad = 0):
+    nyquist = 0.5 * fs
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = butter(order, [low, high], btype='band')
+    y = filtfilt(b,a,data, padlen=pad)
+    return y
 
 file_names = []
 start_times = []
@@ -65,8 +72,8 @@ auto_label = []
 rolls=[]
 thresh = 0.3
 win_time = 0.01
-for file in os.listdir(train_path):
-    full_path = os.path.join(train_path,file)
+for file in os.listdir(test_path):
+    full_path = os.path.join(test_path,file)
     y, fs = sf.read(full_path)
     if y.shape[1] > 1:
         y = y[:,0]
@@ -97,6 +104,6 @@ N = df.shape[0]-2*df[df['Label'].eq(1)].shape[0]
 df1 = df.drop(df[df['Label'].eq(0)].sample(N).index)
 df1.reset_index(drop=True,inplace=True)
 #%%
-df1.to_csv(r"C:\Users\jeffu\Documents\Recordings\Datasets\AudioFilesandTimes")
+df1.to_csv(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\val_data_info.csv",index=False)
 
 # %%

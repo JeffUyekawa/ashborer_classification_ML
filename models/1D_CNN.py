@@ -13,8 +13,8 @@ import sys
 from time import time
 from sklearn.metrics import log_loss, accuracy_score
 
-sys.path.insert(1, "/home/jru34/Ashborer/Models")# For Monsoon
-#sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
+#sys.path.insert(1, "/home/jru34/Ashborer/Models")# For Monsoon
+sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
 from custom_dataset_class import borer_data
 #%%
 
@@ -23,19 +23,19 @@ if torch.cuda.is_available():
 else:
     device='cpu'
 
-#TRAIN_ANNOTATION = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\training_data_info.csv"
-#VAL_ANNOTATION = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\val_data_info.csv"
+TRAIN_ANNOTATION = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\training_data_info.csv"
+VAL_ANNOTATION = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\val_data_info.csv"
 
-#TRAIN_AUDIO = r"C:\Users\jeffu\Documents\Recordings\recordings_for_train"
-#VAL_AUDIO = r"C:\Users\jeffu\Documents\Recordings\recordings_for_test"
+TRAIN_AUDIO = r"C:\Users\jeffu\Documents\Recordings\recordings_for_train"
+VAL_AUDIO = r"C:\Users\jeffu\Documents\Recordings\recordings_for_test"
 
-
+'''
 TRAIN_ANNOTATION = "/home/jru34/Ashborer/Datasets/training_data_info.csv"
 VAL_ANNOTATION = "/home/jru34/Ashborer/Datasets/val_data_info.csv"
 
 TRAIN_AUDIO = "/home/jru34/Ashborer/Audio_Files/recordings_for_train"
 VAL_AUDIO = "/home/jru34/Ashborer/Audio_Files/recordings_for_test"
-
+'''
 train_dataset = borer_data(TRAIN_ANNOTATION,TRAIN_AUDIO, device = device)
 val_dataset = borer_data(VAL_ANNOTATION, VAL_AUDIO, device = device)
 
@@ -184,10 +184,10 @@ def train_model(mod,num_epochs):
                 test_loss.append(log_loss(y_pred=y_pred2.cpu(),y_true=labels.cpu(),labels=[0,1]))
                 test_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess_2.cpu()))
                 
-            avg_test_loss.append(log_loss(y_pred=y_pred2.cpu(),y_true=labels.cpu(),labels=[0,1]))
-            avg_test_acc.append(accuracy_score(y_true=labels.cpu(),y_pred=guess_2.cpu()))
+            avg_test_loss.append(np.average(test_loss))
+            avg_test_acc.append(np.average(test_acc))
         
-        valid_loss = test_loss[-1]
+        valid_loss = np.average(test_loss)
         early_stopping(valid_loss,model)
         if early_stopping.early_stop:
             print('Early stopping')
@@ -214,12 +214,12 @@ optimizer = torch.optim.Adam(model.parameters(),lr =.0003, weight_decay = 0.0)
 
 
 train_loader = DataLoader(dataset=train_dataset,
-                        batch_size=4,
+                        batch_size=64,
                         shuffle=True,
                         num_workers=0,
                         )
 val_loader = DataLoader(dataset = val_dataset,
-                        batch_size=4,
+                        batch_size=64,
                         shuffle = True,
                         num_workers = 0)
 #Can change if using gpu for parallel computing)
@@ -247,7 +247,7 @@ with torch.no_grad():
     axs[1][1].legend()
 
     
-    fig.savefig( "/home/jru34/Ashborer/outputs/1D_training_curves.png")
+    #fig.savefig( "/home/jru34/Ashborer/outputs/1D_training_curves.png")
 '''
     fig.savefig('1Layer.png')
     overallloss.append(np.mean(overallloss))
