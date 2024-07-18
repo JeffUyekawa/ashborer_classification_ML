@@ -43,7 +43,7 @@ def verify_event(y,fs, start,end):
     plt.show()
     check = 2
     while check ==2:
-        sd.play(y[buff_start:buff_end],fs)
+        sd.play(filt[buff_start:buff_end],fs)
         check = int(input('0: no event, 1: event, 2:replay'))
     return check
 
@@ -52,7 +52,7 @@ start_times = []
 end_times = []
 auto_label = []
 rolls=[]
-thresh = 0.2
+thresh = 0.18
 win_time = 0.05
 for i,file in enumerate(os.listdir(val_path)):
     full_path = os.path.join(val_path,file)

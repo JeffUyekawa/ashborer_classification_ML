@@ -65,26 +65,35 @@ def bandpass_filter(data,fs, lowcut=1000, highcut=12000, order=5, pad = 0):
     y = filtfilt(b,a,data, padlen=pad)
     return y
 
-def verify_event(y,fs, start,end):
-    buff_start = max(start - 24000,0)
+def verify_event(y, fs, start, end):
+    buff_start = max(start - 24000, 0)
     buff_end = min(end + 24000, 1440000)
 
-    filt = bandpass_filter(data=y,fs=fs)
-    t = np.arange(len(y))/fs
+    filt = bandpass_filter(data=y, fs=fs)
+    t = np.arange(len(y)) / fs
 
     clip = filt[buff_start:buff_end]
     t_clip = t[buff_start:buff_end]
 
     event = filt[start:end]
     t_event = t[start:end]
-
-    plt.plot(t_clip,clip)
-    plt.plot(t_event,event, 'r')
+    fig, ax = plt.subplots(1, 2)
+    ax[0].plot(t_clip, clip)
+    ax[0].plot(t_event, event, 'r')
+    ax[1].plot(t_event, event)
     plt.show()
     check = 2
-    while check ==2:
-        sd.play(y[buff_start:buff_end],fs)
-        check = int(input('0: no event, 1: event, 2:replay'))
+    while check == 2:
+        sd.play(y[buff_start:buff_end], fs)
+        try:
+            user_input = input('0: no event, 1: event, 2:replay: ')
+            check = int(user_input)
+            if check not in [0, 1, 2]:
+                print("Invalid input. Please enter 0, 1, or 2.")
+                check = 2  # Reset check to keep the loop running
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+            check = 2  # Reset check to keep the loop running
     return check
 
 file_names = []
@@ -92,9 +101,9 @@ start_times = []
 end_times = []
 auto_label = []
 rolls=[]
-thresh = 0.3
+thresh = 0.19
 win_time = 0.05
-for i,file in enumerate(os.listdir(test_path)):
+for k,file in enumerate(os.listdir(test_path)):
     full_path = os.path.join(test_path,file)
     y, fs = sf.read(full_path)
     if y.shape[1] > 1:
@@ -114,7 +123,7 @@ for i,file in enumerate(os.listdir(test_path)):
                 rolls.append(j*10)
                 auto_label.append(check)
         else:
-            if i%5==0: 
+            if i%2==0: 
                 file_names.append(file)
                 start_times.append(start)
                 end_times.append(end)
@@ -142,4 +151,47 @@ else:
 df1.to_csv(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\val_data_info.csv",index=False)
 
 
+# %%
+df_pos = df1[df1.Label.eq(1)]
+df_neg = df1[df1.Label.eq(0)]
+df_pos = df_pos[df_pos['Roll Amount'].eq(0)]
+df_neg = df_neg[df_neg['Roll Amount'].eq(0)]
+pos_maxes = []
+neg_maxes = []
+
+
+for i,row in df_pos.iterrows():
+    file = row['File']
+    start = row['Start']
+    end = row['End']
+    path = os.path.join(train_path,file)
+    y, fs = sf.read(path)
+    y = y[:,0]
+    y = y/np.max(np.abs(y))
+    y = bandpass_filter(y,fs)
+    clip = y[start:end]
+    pos_maxes.append(np.max(np.abs(clip)))
+
+for i,row in df_neg.iterrows():
+    file = row['File']
+    start = row['Start']
+    end = row['End']
+    path = os.path.join(train_path,file)
+    y, fs = sf.read(path)
+    y = y[:,0]
+    y = y/np.max(np.abs(y))
+    y = bandpass_filter(y,fs)
+    clip = y[start:end]
+    neg_maxes.append(np.max(np.abs(clip)))
+
+# %%
+np.min(pos_maxes)
+# %%
+np.average(neg_maxes)
+# %%
+np.max(neg_maxes)
+# %%
+plt.hist(pos_maxes, bins= 100)
+# %%
+plt.hist(neg_maxes)
 # %%
