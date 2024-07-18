@@ -58,19 +58,3 @@ class borer_data(Dataset):
     def _get_roll(self,index):
         return self.annotations.iloc[index,3]
     
-
-#%%
-
-path = r"C:\Users\jeffu\Documents\Recordings\recordings_for_train\2024-05-17_13_07_19.wav"
-y, fs = ta.load(path)
-y = y[0,:int(.01*fs)].reshape(1,-1)
-trans = ta.transforms.MelSpectrogram(sample_rate = 48000, n_fft = 64, hop_length = 16, f_min = 1000, f_max = 12000, n_mels = 16)
-
-mel = trans(y)
-
-mel = mel[0,:,:]
-import matplotlib.pyplot as plt 
-plt.imshow(mel)
-
-
-# %%
