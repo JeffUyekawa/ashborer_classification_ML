@@ -13,6 +13,9 @@ import tqdm as tqdm
 import sys
 from time import time
 from sklearn.metrics import log_loss, accuracy_score
+import warnings
+
+warnings.filterwarnings("ignore")
 
 sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
 from custom_dataset_class import borer_data

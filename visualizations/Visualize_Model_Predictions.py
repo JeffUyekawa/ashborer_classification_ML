@@ -107,16 +107,45 @@ class CNNNetwork_1D(nn.Module):
         
         return output
 
+model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=True)
+original_weights = model.conv1.weight.data
+new_conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+new_conv1.weight.data = original_weights.mean(dim=1, keepdim=True)
+model.conv1 = new_conv1
+num_ftrs = model.fc.in_features
+model.fc = nn.Linear(num_ftrs, 1)
+
+class ResNetWithSigmoid(nn.Module):
+    def __init__(self, base_model):
+        super(ResNetWithSigmoid, self).__init__()
+        # Copy the ResNet model
+        self.resnet = base_model
+        
+        # Define a sigmoid activation function
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # Pass input through ResNet model
+        x = self.resnet(x)
+        
+        # Apply sigmoid activation
+        x = self.sigmoid(x)
+        
+        return x
+
 sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
 from custom_dataset_class import borer_data
 
 model_1D = CNNNetwork_1D()
 model_2D = CNNNetwork_2D()
+model_resnet = ResNetWithSigmoid(model)
 dict_1 = r"C:\Users\jeffu\Downloads\1DAshBorercheckpoint.pt"
 dict_2 = r"C:\Users\jeffu\Downloads\2DAshBorercheckpoint.pt"
+dict_3 = r"C:\Users\jeffu\Downloads\ResnetAshBorercheckpoint.pt"
 
 model_1D.load_state_dict(torch.load(dict_1))
 model_2D.load_state_dict(torch.load(dict_2))
+model_resnet.load_state_dict(torch.load(dict_3))
 
 ANNOTATIONS_FILE = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\data_for_validation.csv"
 AUDIO_DIR = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\validation_recordings"
@@ -126,6 +155,7 @@ df = pd.read_csv(ANNOTATIONS_FILE)
 dataset_1D = borer_data(ANNOTATIONS_FILE,AUDIO_DIR,mel_spec=False)
 dataset_2D = borer_data(ANNOTATIONS_FILE,AUDIO_DIR,mel_spec = True)
 
+
 loader_1D = DataLoader(dataset_1D,
                        batch_size=1,
                        shuffle=False)
@@ -133,10 +163,10 @@ loader_2D = DataLoader(dataset_2D,
                        batch_size=1,
                        shuffle=False)
 #%%
-model_1D.eval()
+model_resnet.eval()
 model_2D.eval()
 outputs_2D = []
-outputs_1D=[]
+outputs_resnet=[]
 with torch.no_grad():
     for i, (inputs, labels) in enumerate(loader_2D):
         preds = model_2D(inputs)
@@ -144,21 +174,21 @@ with torch.no_grad():
         outputs_2D.append(guess.item())
 
 with torch.no_grad():
-    for i, (inputs, labels) in enumerate(loader_1D):
-        preds = model_1D(inputs)
+    for i, (inputs, labels) in enumerate(loader_2D):
+        preds = model_resnet(inputs)
         guess = (preds>0.5)*1
-        outputs_1D.append(guess.item())
+        outputs_resnet.append(guess.item())
 
 # %%
 df['2D Predictions'] = outputs_2D
-df['1D Predictions'] = outputs_1D
+df['Resnet Predictions'] = outputs_resnet
 #%%
 df.to_csv(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\visualizations\model_results.csv")
 # %%
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 y_test = df['Label']
-predictions = df['2D Predictions']
+predictions = df['Resnet Predictions']
 cm = confusion_matrix(y_test, predictions)
 disp = ConfusionMatrixDisplay(confusion_matrix=cm)
 disp.plot()
@@ -177,6 +207,7 @@ df = pd.read_csv(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Proje
 import soundfile as sf
 from IPython.display import Audio, display
 import sounddevice as sd
+#%%
 def verify_event(df):
     
     for i, row in df.iterrows():
@@ -258,7 +289,7 @@ df1 = verify_event(df)
 #%%
 
 for i, file in enumerate(os.listdir(AUDIO_DIR)):
-    audio_df = df1[df1['File']==file]
+    audio_df = df[df['File']==file]
     full_path = os.path.join(AUDIO_DIR,file)
     y, fs = sf.read(full_path)
     y = y[:,0]
@@ -268,44 +299,70 @@ for i, file in enumerate(os.listdir(AUDIO_DIR)):
     display(Audio(y,rate=fs))
 
     plt.figure()
-    fig,ax = plt.subplots(1,1)
-    ax.plot(t,filt)
+    fig,ax = plt.subplots(2,1)
+    ax[0].plot(t,filt)
+    ax[1].plot(t,filt)
     pos_df = audio_df[audio_df['2D Predictions']==1]
 
-    used_colors=[]
+    for k, mod_name in zip([0,1],['2D Predictions', 'Resnet Predictions']):
 
-    for j, row in audio_df.iterrows():
-        start = row['Start']
-        end = row['End']
-        clip = filt[start:end]
-        t_clip = t[start:end]
+        used_colors=[]
+
+        for j, row in audio_df.iterrows():
+            start = row['Start']
+            end = row['End']
+            clip = filt[start:end]
+            t_clip = t[start:end]
+            
+            if (row['Label']==1) and (row[mod_name]==0):
         
-        if (row['Label']==1) and (row['2D Predictions']==0):
-    
-            if 'black' not in used_colors:
-                ax.plot(t_clip,clip, 'black', label='False Negative')
-                used_colors.append('black')
-            else:
-                ax.plot(t_clip,clip,'black')
-        elif (row['Label']==1) and (row['2D Predictions']==1):
-            if 'red' not in used_colors:
-                ax.plot(t_clip,clip, 'red', label='True Positive')
-                used_colors.append('red')
-            else:
-                ax.plot(t_clip,clip,'red')
-        elif (row['Label']==0) and (row['2D Predictions']==1):
-            if 'orange' not in used_colors:
-                ax.plot(t_clip,clip, 'orange', label='False Positive')
-                used_colors.append('orange')
-            else:
-                ax.plot(t_clip,clip,'orange')
+                if 'black' not in used_colors:
+                    ax[k].plot(t_clip,clip, 'black', label='False Negative')
+                    used_colors.append('black')
+                else:
+                    ax[k].plot(t_clip,clip,'black')
+            elif (row['Label']==1) and (row[mod_name]==1):
+                if 'red' not in used_colors:
+                    ax[k].plot(t_clip,clip, 'red', label='True Positive')
+                    used_colors.append('red')
+                else:
+                    ax[k].plot(t_clip,clip,'red')
+            elif (row['Label']==0) and (row[mod_name]==1):
+                if 'orange' not in used_colors:
+                    ax[k].plot(t_clip,clip, 'orange', label='False Positive')
+                    used_colors.append('orange')
+                else:
+                    ax[k].plot(t_clip,clip,'orange')
             
 
-    ax.set_title(f'Clip #{i+1} | 2D Model')
-    ax.legend()
+    ax[k].set_title(f'Clip #{i+1} | {mod_name}')
+    ax[k].legend()
     fig.tight_layout()
     plt.show()
 
 # %%
+path = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\validation_recordings - Copy\Clip 2.wav"
+audio_df = df[df.File=='2024-05-20_10_59_37.wav']
+y, fs = sf.read(path)
+y = y[:,0]
+t = np.arange(len(y))/fs
 
+start_false = int(5.77*fs)
+end_false = int(5.82*fs)
+
+true_start = int(3.85*fs)
+true_end = int(3.9*fs)
+
+t_false , y_false= t[start_false:end_false],y[start_false:end_false]
+t_true, y_true = t[true_start:true_end],y[true_start:true_end]
+
+
+# %%
+plt.plot(t,y)
+# %%
+diff = np.diff(y)
+diff = diff/np.max(np.abs(diff))
+plt.plot(t[1:],np.abs(diff))
+# %%
+Audio(y,rate=fs)
 # %%
