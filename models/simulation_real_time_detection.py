@@ -90,6 +90,8 @@ def simulate_real_time_classification(model,wav_file, duration = 30):
         audio_data = audio_data[0,:].reshape(1,-1)
     
     num_chunks = int(duration * 1000/50)
+    chunk_list = []
+    times_list = []
     '''
     audio_data = audio_data/audio_data.max()
     
@@ -111,20 +113,35 @@ def simulate_real_time_classification(model,wav_file, duration = 30):
             pred = classify_chunk(model,audio_chunk)
             
             if pred== 1:
+                times_list.append((start_idx,end_idx))
                 print(f'Event Detected at {int(start_idx/sr)} seconds')
             time.sleep(0.05)
     except KeyboardInterrupt:
         print('Simulation Interrupted')
     finally:
         print('Simulation Complete')
+    return times_list
 
-
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     
     model = torch.load(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\models\saved_2D_model.pth")
-    wav_file = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\validation_recordings - Copy\Clip 4.wav"
-    simulate_real_time_classification(model,wav_file, duration=30)
+    wav_file = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\validation_recordings - Copy\Clip 2.wav"
+    times = simulate_real_time_classification(model,wav_file, duration=30)
+    y, fs = sf.read(wav_file)
+    y = y[:,0]
+    t = np.arange(len(y))/fs
+    plt.plot(t,y)
+    for i, (start,end) in enumerate(times):
+        t_clip = t[start:end]
+        clip = y[start:end]
+        if i== 0:
+            plt.plot(t_clip,clip,'r', label='Event Detected')
+        else:
+           plt.plot(t_clip,clip,'r')
+    plt.legend()
+    plt.show() 
 
 
 
