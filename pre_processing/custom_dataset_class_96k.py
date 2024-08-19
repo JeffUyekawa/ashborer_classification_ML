@@ -4,18 +4,14 @@ from torch.utils.data import Dataset
 import pandas as pd
 import torchaudio as ta
 import os
-from scipy.signal import butter, filtfilt
 import numpy as np 
 
-
-
-
 class borer_data(Dataset):
-    def __init__ (self, annotations_file, audio_dir, device = 'cpu', mel_spec = False):
+    def __init__ (self, annotations_file, audio_dir, device = 'cpu', spec = False):
         self.annotations = pd.read_csv(annotations_file)
         self.audio_dir = audio_dir
         self.device = device
-        self.mel_spec = mel_spec
+        self.spec = spec
         
     def __len__(self):
         return len(self.annotations)
@@ -32,25 +28,44 @@ class borer_data(Dataset):
         start = self._get_start_time(index)
         end = self._get_end_time(index)
         roll = self._get_roll(index)
+        noise = self._get_noise(index)
+        if noise < 0:
+            signal = self._get_noisy(signal,noise)
         signal = signal[:,start:end]
         signal = np.roll(signal,roll)
         signal = torch.from_numpy(signal.astype('f'))
         signal = signal.to(self.device)
-        if self.mel_spec:
-            trans = self._get_mel_spec_().to(self.device)
-            signal = trans(signal)
+        if self.spec:
+            trans1, trans2 = self._get_spec_()
+            trans1.to(self.device)
+            trans2.to(self.device)
+            signal = trans1(signal)
+            signal = trans2(signal)
         return signal, label
     def _get_audio_sample_path(self,index):
         path = os.path.join(self.audio_dir,self.annotations.iloc[index,0])
         return path
     def _get_audio_sample_label(self,index):
-        return self.annotations.iloc[index,4]
-    def _get_mel_spec_(self):
-        return ta.transforms.MelSpectrogram(sample_rate=96000,n_fft=128,hop_length=32)
+        return self.annotations.iloc[index,5]
+    def _get_spec_(self):
+        return ta.transforms.Spectrogram(n_fft=128,hop_length=32, power = 1), ta.transforms.AmplitudeToDB(stype='magnitude')
     def _get_start_time(self,index):
         return self.annotations.iloc[index,1]
     def _get_end_time(self,index):
         return self.annotations.iloc[index,2]
     def _get_roll(self,index):
         return self.annotations.iloc[index,3]
+    def _get_noise(self,index):
+        return self.annotations.iloc[index,4]
+    def _get_noisy(y, snr):
+        noise = np.random.normal(0, 1, y.shape)
+        noise = torch.from_numpy(noise.astype('f'))
+        desired_snr_db = snr
+        audio_power = torch.mean(y**2)
+        noise_power = torch.mean(noise**2)
+        scaling_factor = torch.sqrt(audio_power / (10**(desired_snr_db / 10) * noise_power))
+        noise = noise * scaling_factor
+        noisy_y = y + noise
+        return noisy_y
+
     

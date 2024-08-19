@@ -18,7 +18,7 @@ import time
 import os
 import datetime
 
-#GPIO Pin Numers (BCM not Board Pins nums) 
+GPIO Pin Numers (BCM not Board Pins nums) 
 relayChannel1 = 26 #Board pin 37, BCM pin 26
 relayChannel2 = 20 #Board pin 38, BCM pin 20
 relayChannel3 = 21 #Board pin 40, BCM pin 21
@@ -26,7 +26,7 @@ codecLEDGreen = 23
 codecLEDRed   = 24
 codecSwitch   = 27
 
-haltFlag = False
+
 
 greenLED = LED(codecLEDGreen)
 redLED   = LED(codecLEDRed)
@@ -36,12 +36,7 @@ codecButton = Button(codecSwitch)
 
 primaryPath = "/home/dasl/repos/boring_recorder/"
 
-def setHaltFlag():
-    global haltFlag
-    print("Setting Halt Flag!")
-    haltFlag = True
 
-codecButton.when_pressed = setHaltFlag
 
 # PyAudio parameters
 FORMAT = pyaudio.paInt16
@@ -97,6 +92,9 @@ class CNNNetwork(nn.Module):
         
         return output
 
+# Blink the LED for a short duration (e.g., 100ms on, 100ms off)
+def flash_green_led():
+    greenLED.blink(on_time=0.1, off_time=0.1, n=1, background=True)
 
 def bandpass_filter(data, fs, lowcut=1000, highcut=12000, order=5, pad=0):
     nyquist = 0.5 * fs
@@ -121,7 +119,9 @@ def classify_chunk(audio_chunk):
 
 def record_and_classify(duration_seconds=30):
     relayCh1.off() #Denergize to turn on voltage to signal conditioner
+    print('Waiting 5 seconds to begin.')
     time.sleep(5) #give voltage in signal condition time to settle
+    print('Beginning detection')
     p = pyaudio.PyAudio()
 
     # Open a stream for input
@@ -132,8 +132,6 @@ def record_and_classify(duration_seconds=30):
                     frames_per_buffer=CHUNK,
 
                     )
-
-    print("Recording and classifying in real-time...")
     redLED.on()
 
     try:
@@ -153,10 +151,7 @@ def record_and_classify(duration_seconds=30):
             pred = classify_chunk(audio_chunk)
 
             if pred == 1:
-                greenLED.on()
-                time.sleep(0.1)  # Flash the LED for 100ms
-                greenLED.off()
-                print('Event Detected!')
+                flash_green_LED()
 
     except KeyboardInterrupt:
         print('Recording Interrupted')
@@ -191,12 +186,11 @@ def setdeviceparameters(fileNum=1):
 
 if __name__ == "__main__":
     # Load your trained model
-    model = torch.load(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\models\saved_2D_model.pth")  # Update this with the path to your model
+    model = CNNNetwork()
+    model_path = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\models\Current_Best_2D.pt"
+    model.load_state_dict(torch.load(model_path))  # Update this with the path to your model
     model.eval()
     recordingDuration = 45
-    if haltFlag:
-        print("Exiting Program - Halt Flag Set")
-        exit(1)
     setdeviceparameters(4)
     record_and_classify(duration_seconds=recordingDuration)
 

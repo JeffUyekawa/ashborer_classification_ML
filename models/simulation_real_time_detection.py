@@ -82,6 +82,7 @@ def classify_chunk(model,audio_chunk):
     with torch.no_grad():
         output = model(spec)
         pred =  (output>=0.5)*1
+        del output, spec 
     return pred.item()
 
 def simulate_real_time_classification(model,wav_file, duration = 30):
@@ -99,7 +100,6 @@ def simulate_real_time_classification(model,wav_file, duration = 30):
 
     
     num_chunks = int(duration * 1000/50)
-    chunk_list = []
     times_list = []
     '''
     audio_data = audio_data/audio_data.max()
@@ -138,14 +138,14 @@ if __name__ == "__main__":
     
     #model = torch.load(r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\models\saved_2D_model.pth")
     model = CNNNetwork()
-    model.load_state_dict(torch.load(r"C:\Users\jeffu\Downloads\2DAshBorercheckpoint.pt"))
+    model.load_state_dict(torch.load(r"C:\Users\jeffu\Documents\Ash Borer Project\models\Current_Best_2D.pt"))
     
     #Clip recorded at 48k
-    wav_file = r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\Datasets\validation_recordings - Copy\Clip 4.wav"
-
+    #wav_file = r"C:\Users\jeffu\Documents\Ash Borer Project\Datasets\validation_recordings - Copy\Clip 1.wav"
+    #wav_file = r"C:\Users\jeffu\Documents\Recordings\05_20_2024\2024-05-16_16_55_29.wav"
     #Clips recorded at 96k
     #wav_file = r"C:\Users\jeffu\Documents\Recordings\06_27_2024_R1\2024-06-24_15_02_24.wav"
-    #wav_file = r"C:\Users\jeffu\Documents\Recordings\06_27_2024_R1\2024-06-24_15_13_04.wav"
+    wav_file = r"C:\Users\jeffu\Documents\Recordings\06_27_2024_R1\2024-06-24_15_13_04.wav"
 
     #96k Forestry
     #wav_file = r"C:\Users\jeffu\Documents\Recordings\06_28_2024_F1\2024-06-27_14_31_12.wav"
@@ -177,4 +177,41 @@ if __name__ == "__main__":
 
 
 
+# %%
+import os
+path = r"C:\Users\jeffu\Documents\Recordings\06_28_2024_F1"
+detected = 0
+false_positives = []
+for file in os.listdir(path):
+    wav_file = os.path.join(path,file)
+    times = simulate_real_time_classification(model,wav_file,duration=30)
+    detections = len(times)
+    if detections > 0:
+        false_positives.append(wav_file)
+    print(f'{detections} events detected')
+    detected = detected + detections
+
+print(f'Total detections: {detected}')
+
+# %%
+len(os.listdir(path))
+# %%
+false_positives = ['C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-27_14_06_37.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-27_16_53_29.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-28_08_24_21.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-28_09_03_31.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-28_09_48_33.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-28_12_55_29.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-28_13_32_57.wav',
+ 'C:\\Users\\jeffu\\Documents\\Recordings\\06_28_2024_F1\\2024-06-28_13_39_09.wav']
+for i, file in enumerate(false_positives):
+    y, fs = sf.read(file)
+    y = y/np.max(np.abs(y))
+    sd.play(y,fs)
+    t = np.arange(len(y))/fs
+    plt.plot(t,y)
+    plt.show()
+    time.sleep(30)
+# %%
+print(np.array(false_positives)[[0,5, 16, 19,22, 27,29,30]])
 # %%

@@ -24,6 +24,10 @@ class borer_data(Dataset):
         signal, sr = ta.load(audio_sample_path)
         if signal.shape[0] > 1:
             signal = signal[0,:].reshape(1,-1)
+        if sr != 48000:
+            resampler = ta.transforms.Resample(sr,48000)
+            signal = resampler(signal)
+            sr = 48000
         signal = self._bandpass_filter(data=signal,fs=sr)
         start = self._get_start_time(index)
         end = self._get_end_time(index)
@@ -50,7 +54,7 @@ class borer_data(Dataset):
         y = filtfilt(b,a,data, padlen=pad)
         return y
     def _get_mel_spec_(self):
-        return ta.transforms.MelSpectrogram(sample_rate=48000,n_fft=64,hop_length=16,f_min = 1000, f_max = 12000,n_mels=16)
+        return ta.transforms.MelSpectrogram(sample_rate=96000,n_fft=128,hop_length=32,f_min = 1000, f_max = 12000)
     def _get_start_time(self,index):
         return self.annotations.iloc[index,1]
     def _get_end_time(self,index):
