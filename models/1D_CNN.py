@@ -102,6 +102,10 @@ if __name__ == "__main__":
     overallloss=[]
     overallacc=[]
     model = CNNNetwork()
+    if torch.cuda.device_count()> 1:
+        model = nn.DataParallel(model)
+    model = model.to(device)
+
     loss_fn = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(),lr =.0003, weight_decay = 0.0)
 
