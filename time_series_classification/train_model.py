@@ -13,7 +13,8 @@ import sys
 from time import time
 from sklearn.metrics import log_loss, accuracy_score
 
-sys.path.insert(1, "/home/jru34/Ashborer/Models")
+#sys.path.insert(1, "/home/jru34/Ashborer/Models")
+sys.path.insert(1, r"C:\Users\jeffu\Documents\Ash Borer Project\models")
 from early_stopping import EarlyStopping
 #%%
 def train_model(mod,num_epochs,eps,device, train_loader, val_loader, loss_fn, optimizer, checkpoint_path, verbose = False):
@@ -29,6 +30,7 @@ def train_model(mod,num_epochs,eps,device, train_loader, val_loader, loss_fn, op
     early_stopping = EarlyStopping(patience=3, verbose=verbose, path = checkpoint_path)
     sig = nn.Sigmoid()
     for epoch in range(num_epochs):
+        
         if verbose:
             if epoch % 10 == 9 or epoch == num_epochs-1 or epoch == 0:
                     print(f'Epoch {epoch+1} \n---------------------')

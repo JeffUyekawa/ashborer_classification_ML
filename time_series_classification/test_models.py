@@ -48,15 +48,25 @@ def get_nearest_power(n):
     power_of_2 = 2 ** round(math.log2(result))
     return power_of_2
 
+def plot_training_curves(train_loss, test_loss, train_acc, test_acc):
+    fig,axs = plt.subplots(2,2)
+
+    axs[0][0].plot(train_loss, label= 'Training Loss')
+    axs[0][0].legend()
+    axs[0][1].plot(test_loss, 'r', label = 'Test Loss'  )
+    axs[0][1].legend()
+
+
+    axs[1][0].plot(train_acc, label = 'Train Acc')
+    axs[1][0].legend()
+    axs[1][1].plot(test_acc, 'r', label = 'Test Acc')
+    axs[1][1].legend()
+    plt.show()
+
 def train_spectrogram_model(X_train, X_test, y_train, y_test, meta, adjust = False):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = CNNNetwork(num_channels =X_train.shape[1] , num_classes=len(meta['class_values']))
-    if torch.cuda.device_count()> 1:
-        model = nn.DataParallel(model)
-    model = model.to(device)
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(),lr =.00001, weight_decay = 0.0)
-
+    
+    
     train_dataset = timeseries_data(X_train, y_train, adjust)
     val_dataset = timeseries_data(X_test,y_test, adjust)
 
@@ -69,6 +79,13 @@ def train_spectrogram_model(X_train, X_test, y_train, y_test, meta, adjust = Fal
                             batch_size=1,
                             shuffle = False,
                             num_workers =0)
+    model = CNNNetwork(num_channels =X_train.shape[1] , num_classes=len(meta['class_values']), first_input = next(iter(train_loader))[0])
+    if torch.cuda.device_count()> 1:
+        model = nn.DataParallel(model)
+    model = model.to(device)
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(),lr =.00001, weight_decay = 0.0)
+
 
     start = time()
     model, train_loss, test_loss, train_acc, test_acc = train_model(model,1000, 0.0,device, train_loader, val_loader, loss_fn, optimizer, "ts_checkpoint.pt")
@@ -81,10 +98,15 @@ def train_spectrogram_model(X_train, X_test, y_train, y_test, meta, adjust = Fal
             pred = model(inputs)
             guess = torch.argmax(pred, axis=1)
             predictions.append(guess.item())
+    plot_training_curves(train_loss, test_loss, train_acc, test_acc)
     end = time()
     pred_time = end-start   
-    y_test = y_test.astype('long')-1
+    y_test = y_test.astype('long')
+    if adjust:
+        y_test = y_test-1
     acc = accuracy_score(y_test, predictions)
+    print(f'True: {y_test}')
+    print(f'Pred: {predictions}')
     print(f"Spectrogram Accuracy: {acc:.2f}\n \
         Training time: {train_time:.2f} seconds\n \
             Prediction time: {pred_time:.2f} seconds")
@@ -261,3 +283,8 @@ if __name__ == "__main__":
     df = evaluate_models()
     df.to_csv('initial_results.csv', index = False)
 
+#%%
+X_train, X_test, y_train, y_test, meta = load_and_split('ACSF1')
+
+train_spectrogram_model(X_train, X_test, y_train, y_test, meta, False)
+# %%

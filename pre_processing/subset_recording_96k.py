@@ -8,48 +8,38 @@ import random
 import shutil
 import os
 import sys
-from scipy.signal import find_peaks, butter, filtfilt
+from scipy.signal import butter, filtfilt
 from IPython.display import clear_output
 # Define a function that avoids bad files, then selects a random subset of .wav recordings for the purpose of testing. 
-def select_random_files(source_folder, bad_files, destination_folder, num_files, train_set = []):
+def select_random_files(parent_folder, test_set, destination_folder, num_files, train_set = []):
     # Get a list of all files in the source folder
-    files = [f for f in os.listdir(source_folder) if os.path.isfile(os.path.join(source_folder, f)) and (f not in bad_files) and (f not in train_set)]
-    
-    # Ensure the destination folder exists
-    if not os.path.exists(destination_folder):
-        os.makedirs(destination_folder)
-    
+    files = []
+    for source_folder in os.listdir(parent_folder):
+        source_path = os.path.join(parent_folder,source_folder)
+        files = files + [os.path.join(source_path,f) for f in os.listdir(source_path) if os.path.isfile(os.path.join(source_path, f)) and (f not in test_set) and (f not in train_set)]
+    print(f'Total files {len(files)}')
     # Select a random subset of the files
     selected_files = random.sample(files, num_files)
-    
+    print(f'Selected {len(selected_files)} files')
     # Copy the selected files to the destination folder
-    for file_name in selected_files:
-        source_file = os.path.join(source_folder, file_name)
+    for file in selected_files:
+        print(f'File: {file}')
+        files = file.split('\\')
+        file_name = files[-1]
+        print(f'File Name: {file_name}')
         destination_file = os.path.join(destination_folder, file_name)
-        shutil.copy(source_file, destination_file)
+        shutil.copy(file, destination_file)
     
     print(f"Selected {num_files} files from {source_folder} and copied them to {destination_folder}")
 
-path=r"C:\Users\jeffu\Documents\Recordings\06_27_2024_R1"
-
-#List of recordings of low quality discovered with 2-means clustering
-bad_recordings = ['2024-05-16_15_49_06.wav',
- '2024-05-17_02_42_21.wav',
- '2024-05-17_05_28_52.wav',
- '2024-05-17_12_43_02.wav',
- '2024-05-17_18_33_25.wav',
- '2024-05-18_01_29_23.wav',
- '2024-05-18_04_57_28.wav',
- '2024-05-19_02_59_33.wav',
- '2024-05-19_13_32_40.wav',
- '2024-05-19_17_28_28.wav']
-
-target = r"C:\Users\jeffu\Documents\Recordings\recordings_for_test_96k"
-target1 = r"C:\Users\jeffu\Documents\Recordings\recordings_for_train_96k"
+parent_folder = r"C:\Users\jeffu\Documents\Recordings\all_recordings"
+train_target = r"C:\Users\jeffu\Documents\Recordings\one_second_training"
+test_target = r"C:\Users\jeffu\Documents\Recordings\one_second_validation"
+test_set = r"C:\Users\jeffu\Documents\Recordings\test_set"
 #%%
 #Run cell to select random files for test
-#select_random_files(path,bad_recordings,target,20)
-select_random_files(path,bad_recordings,target,5, target1)
+select_random_files(parent_folder,test_set,test_target, 15, train_set=train_target)
+#select_random_files(path,bad_recordings,target,5, target1)
 #%%
 # Insert sys path to load label_audio_events python script
 sys.path.insert(1, r"C:\Users\jeffu\OneDrive\Documents\Jeff's Math\Ash Borer Project\pre_processing")
@@ -178,35 +168,3 @@ else:
 df1.to_csv(r"C:\Users\jeffu\Documents\Ash Borer Project\Datasets\training_recordings_96k_filtered.csv",index=False)
 
 
-# %%
-y, fs = ta.load(r"C:\Users\jeffu\Documents\Recordings\07_26_2024_LAB\2024-07-26_09_27_55.wav")
-# %%
-t = np.arange(y.shape[1])/fs
-plt.plot(t,y[0,:].numpy())
-# %%
-start = int(16.975*fs)
-end = int(17*fs)
-
-clip = y[0,start:end].numpy()
-t_clip = t[start:end]
-
-plt.plot(t_clip,clip)
-# %%
-from sklearn.preprocessing import MinMaxScaler
-trans = ta.transforms.MelSpectrogram(sample_rate = fs, n_fft = 64, hop_length= 16)
-spec = y[:,start:end]/y[:,start:end].max()
-spec = trans(spec)
-scaler = MinMaxScaler()
-scaled = scaler.fit_transform(spec[0])
-plt.imshow(spec[0])
-plt.show()
-plt.imshow(scaled)
-# %%
-for file in os.listdir(test_path):
-    path = os.path.join(test_path, file)
-    y, fs = sf.read(path)
-    t = np.arange(len(y))/fs
-    plt.plot(t,y)
-    plt.title(f'Filename: {file}')
-    plt.show()
-# %%

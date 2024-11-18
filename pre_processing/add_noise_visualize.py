@@ -113,7 +113,7 @@ if __name__ == "__main__":
     wav_file = r"C:\Users\jeffu\Documents\Recordings\07_25_2024_LAB\2024-07-25_10_05_28.wav"
     model = CNNNetwork()
     model = nn.DataParallel(model)
-    model.load_state_dict(torch.load(r"C:\Users\jeffu\Downloads\check_gpu.pt", map_location = torch.device('cpu')))
+    model.load_state_dict(torch.load(r"C:\Users\jeffu\Downloads\2DAshBorercheckpoint (13).pt", map_location = torch.device('cpu')))
     y, fs = torchaudio.load(wav_file)
     y = y / torch.max(torch.abs(y))  # Normalize
     t = torch.arange(len(y[0])) / fs

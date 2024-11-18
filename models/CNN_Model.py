@@ -32,6 +32,7 @@ class CNNNetwork(nn.Module):
         self.flatten=nn.Flatten()
         self.linear1=nn.Linear(in_features=3072,out_features=128)
         self.linear2=nn.Linear(in_features=128,out_features=1)
+        self.output = nn.Sigmoid()
     
     def forward(self,input_data):
         x=self.conv1(input_data)
@@ -42,5 +43,6 @@ class CNNNetwork(nn.Module):
         x=self.flatten(x)
         x=self.linear1(x)
         logits=self.linear2(x)
+        output = self.output(logits)
         
-        return logits
+        return output
