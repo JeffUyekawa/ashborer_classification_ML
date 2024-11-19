@@ -37,7 +37,7 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
         F1: {f1:.2f}\n \
         Training time: {train_time:.2f} seconds\n \
         Prediction Time: {pred_time:.2f} seconds")
-    print('Saving Model')
+    #print('Saving Model')
     #parent_path = r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification"
     #file_name = 'rocket_classifier.pkl'
     #file_path = os.path.join(parent_path, file_name)
@@ -50,15 +50,8 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
 
 
 def evaluate_models(X_train, y_train, X_test, y_test):
-
-    
-    #data = np.load(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\filtered_train_test_arrays.npz")
-    #X_train = data['X_train'][:100]
-    #X_test = data['X_test'][:100]
-    #y_train = data['y_train'][:100]
-    #y_test = data['y_test'][:100]
-    
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(), "HEC":HIVECOTEV2()}
+ 
+    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=500, random_state=13), "HEC":HIVECOTEV2()}
     
     models = []
     accuracies = []
@@ -87,12 +80,12 @@ def sample_x_y(X,y, n, m, seed):
     indices_0 = np.where(y == 0)[0]
     indices_1 = np.where(y == 1)[0]
 
-    # Randomly sample 50 indices from each class
+    # Randomly sample n negative an m positive instances
     np.random.seed(seed)  # For reproducibility
     sample_indices_0 = np.random.choice(indices_0, size=n, replace=False)
     sample_indices_1 = np.random.choice(indices_1, size=m, replace=False)
 
-    # Get the corresponding samples from X_train and y_train
+    # Get the corresponding samples from X and y
     X_sampled = np.concatenate([X[sample_indices_0], X[sample_indices_1]])
     y_sampled = np.concatenate([y[sample_indices_0], y[sample_indices_1]])   
     return X_sampled, y_sampled

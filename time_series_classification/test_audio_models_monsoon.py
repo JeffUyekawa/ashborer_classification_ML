@@ -11,6 +11,7 @@ import os
 
 
 PARENT_PATH = "/home/jru34/Ashborer/time_series_classification"
+N_CPUS = int(os.getenv("SLURM_CPUS_PER_TASK", 1)) 
 def train_benchmark(classifier, X_train, X_test, y_train, y_test):
     clf = classifier
     start = time()
@@ -43,13 +44,9 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
 
 
 
-def evaluate_models():
-    data = np.load('/scratch/jru34/filtered_train_test_arrays.npz')
-    X_train = data['X_train']
-    X_test = data['X_test']
-    y_train = data['y_train']
-    y_test = data['y_test']
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(), "HEC":HIVECOTEV2()}
+def evaluate_models(X_train, y_train, X_test, y_test):
+    
+    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw', n_jobs=N_CPUS),"Rocket": RocketClassifier(num_kernels=500, random_state=13, n_jobs=N_CPUS), "HEC":HIVECOTEV2(n_jobs = N_CPUS)}
     
     models = []
     accuracies = []
@@ -70,13 +67,36 @@ def evaluate_models():
         pred_times.append(pred_time)
         models.append(model_name)
        
-    results = {"Model": models, "Accuracy": accuracies, "Train Time": train_times, "Prediction Time": pred_times}
+    results = {"Model": models, "Accuracy": accuracies, "Precision": precisions, "Recall": recalls, "F1": f1s, "Train Time": train_times, "Prediction Time": pred_times}
     df = pd.DataFrame(results)
     return df
 
+def sample_x_y(X,y, n, m, seed):
+    indices_0 = np.where(y == 0)[0]
+    indices_1 = np.where(y == 1)[0]
+
+    # Randomly sample n negative an m positive instances
+    np.random.seed(seed)  # For reproducibility
+    sample_indices_0 = np.random.choice(indices_0, size=n, replace=False)
+    sample_indices_1 = np.random.choice(indices_1, size=m, replace=False)
+
+    # Get the corresponding samples from X and y
+    X_sampled = np.concatenate([X[sample_indices_0], X[sample_indices_1]])
+    y_sampled = np.concatenate([y[sample_indices_0], y[sample_indices_1]])   
+    return X_sampled, y_sampled
+
 # %%
 if __name__ == "__main__":
-    df = evaluate_models()
+    data = np.load('/scratch/jru34/filtered_train_test_arrays.npz')
+    X_train = data['X_train']
+    X_test = data['X_test']
+    y_train = data['y_train']
+    y_test = data['y_test']
+    del data
+
+    X_train, y_train = sample_x_y(X_train,y_train, 250,250,13)
+    X_test,y_test = sample_x_y(X_test,y_test,100, 100, 13)
+    df = evaluate_models(X_train, y_train, X_test, y_test)
     save_path = os.path.join(PARENT_PATH,'ts_model_results.csv')
     df.to_csv(save_path, index = False)
     
