@@ -7,7 +7,7 @@ All necessary audio files and data sets will be uploaded separately to the share
 
 ## Detection scripts
 Scripts used to implement detection on the device. One important script for workflow is:
-1.**simulation_real_time_detection_96k**: This script can be used to test current models in psuedo-realtime on chosen audio clips. 
+1. **simulation_real_time_detection_96k**: This script can be used to test current models in psuedo-realtime on chosen audio clips. 
 
 ## New Ideas and Exploration
 Scripts used for exploring new ideas and techniques. Current ideas that have not yet been fleshed out are using isolation forest for anomaly detection and using gramian angular difference fields for image classification. 
