@@ -1,11 +1,15 @@
 # %%
 import numpy as np
 import pandas as pd
-from aeon.classification.distance_based import KNeighborsTimeSeriesClassifier
+from aeon.classification.distance_based import KNeighborsTimeSeriesClassifier, ProximityForest
 from aeon.classification.convolution_based import RocketClassifier
+from aeon.classification.feature_based import FreshPRINCEClassifier
 from aeon.classification.hybrid import HIVECOTEV2
+from aeon.classification.deep_learning import InceptionTimeClassifier
+from aeon.classification.dictionary_based import WEASEL
+from aeon.classification.interval_based import RSTSF
+from aeon.classification.shapelet_based import RDSTClassifier
 import matplotlib.pyplot as plt
-import math
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from time import time 
@@ -51,7 +55,7 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
 
 def evaluate_models(X_train, y_train, X_test, y_test):
  
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=500, random_state=13), "HEC":HIVECOTEV2()}
+    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=500, random_state=13), "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(), "Weasel": WEASEL(), "RSTSF": RSTSF(), "FreshPRINCE": FreshPRINCEClassifier(), "PF": ProximityForest()}
     
     models = []
     accuracies = []
