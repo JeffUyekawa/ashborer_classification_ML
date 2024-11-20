@@ -26,14 +26,21 @@ def filter_labeled_data(in_path, out_path):
     path = out_path
     filtered_df.to_csv(path, index = False)
     return path
+
+def sample_multiclass(df, n):
+    df_0 = df[df.Label==0].sample(n)
+    df_1 = df[df.Label==1].sample(n)
+    df_2 = df[df.Label==2].sample(n)
+    df_final = pd.concat([df_0,df_1,df_2])
+    return df_final
 #%%
 if __name__ == '__main__':
     train_temp = r"C:\Users\jeffu\Documents\Recordings\temp_path_train.csv"
     test_temp = r"C:\Users\jeffu\Documents\Recordings\temp_path_test.csv"
-    TRAIN_ANNOTATION = filter_labeled_data(r"C:\Users\jeffu\Documents\Recordings\new_training_data.csv", train_temp)
-    VAL_ANNOTATION = filter_labeled_data(r"C:\Users\jeffu\Documents\Recordings\test_set_labels.csv", test_temp)
+    TRAIN_ANNOTATION = filter_labeled_data(train_path, train_temp)
+    VAL_ANNOTATION = filter_labeled_data(test_path, test_temp)
     TRAIN_AUDIO = r"C:\Users\jeffu\Documents\Recordings\new_training"
-    VAL_AUDIO = r"C:\Users\jeffu\Documents\Recordings\test_set"
+    VAL_AUDIO = r"C:\Users\jeffu\Documents\Recordings\time_series_testset"
 
     train_dataset = borer_data(TRAIN_ANNOTATION,TRAIN_AUDIO,spec=False)
     val_dataset = borer_data(VAL_ANNOTATION, VAL_AUDIO, spec = False)
@@ -52,5 +59,22 @@ if __name__ == '__main__':
     end = time()
     print(f'Test data prepared in {end-start:.2f} seconds')
 # %%
-np.savez(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\filtered_train_test_arrays.npz", X_train = X_train, X_test = X_test, y_train = y_train, y_test = y_test)
+np.savez(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\minimal_train_test_arrays.npz", X_train = X_train, X_test = X_test, y_train = y_train, y_test = y_test)
 # %%
+
+# For use with Multiclass only
+'''train_df = pd.read_csv(filter_labeled_data(TRAIN_ANNOTATION, train_temp))
+test_df = pd.read_csv(filter_labeled_data(VAL_ANNOTATION, test_temp))
+
+train_df = sample_multiclass(train_df,300)
+test_df = sample_multiclass(test_df, 50)
+# %%
+train_df.loc[train_df.Label==2,'Label'] = 0
+test_df.loc[test_df.Label==2,'Label'] = 0
+# %%
+train_path = r"C:\Users\jeffu\Documents\Recordings\time_series_training.csv"
+test_path = r"C:\Users\jeffu\Documents\Recordings\time_series_test.csv"
+
+train_df.to_csv(train_path, index = False)
+test_df.to_csv(test_path, index = False)
+'''
