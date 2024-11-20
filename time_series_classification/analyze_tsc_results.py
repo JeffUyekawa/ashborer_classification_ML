@@ -2,7 +2,7 @@
 #Import necessary packages
 import numpy as np
 import pandas as pd
-from aeon.classification.convolution_based import RocketClassifier
+from aeon.classification.convolution_based import RocketClassifier, Arsenal
 import time
 
 def filter_labeled_data(in_path):
@@ -11,15 +11,14 @@ def filter_labeled_data(in_path):
     path = r"C:\Users\jeffu\Documents\Recordings\temp_path.csv"
     filtered_df.to_csv(path, index = False)
     return path
-
+#%%
 #Make predictions on test set
-
 data = np.load(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\filtered_train_test_arrays.npz")
 X_train = data['X_train']
 X_test = data['X_test']
 y_train = data['y_train']
 y_test = data['y_test']
-clf = RocketClassifier(num_kernels=500, random_state=13)
+clf = Arsenal(num_kernels=100, random_state=13)
 clf.fit(X_train, y_train)
 y_pred = clf.predict(X_test)
 
