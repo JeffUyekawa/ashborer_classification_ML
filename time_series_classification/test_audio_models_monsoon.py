@@ -1,9 +1,14 @@
 # %%
 import numpy as np
 import pandas as pd
-from aeon.classification.distance_based import KNeighborsTimeSeriesClassifier
+from aeon.classification.distance_based import KNeighborsTimeSeriesClassifier, ProximityForest
 from aeon.classification.convolution_based import RocketClassifier
+from aeon.classification.feature_based import FreshPRINCEClassifier
 from aeon.classification.hybrid import HIVECOTEV2
+from aeon.classification.deep_learning import InceptionTimeClassifier
+from aeon.classification.dictionary_based import WEASEL
+from aeon.classification.interval_based import RSTSF
+from aeon.classification.shapelet_based import RDSTClassifier
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from time import time 
@@ -46,7 +51,7 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
 
 def evaluate_models(X_train, y_train, X_test, y_test):
     
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw', n_jobs=N_CPUS),"Rocket": RocketClassifier(num_kernels=500, random_state=13, n_jobs=N_CPUS), "HEC":HIVECOTEV2(n_jobs = N_CPUS)}
+    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=500, random_state=13), "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(), "Weasel": WEASEL(), "RSTSF": RSTSF(), "FreshPRINCE": FreshPRINCEClassifier(), "PF": ProximityForest()}
     
     models = []
     accuracies = []
@@ -87,18 +92,15 @@ def sample_x_y(X,y, n, m, seed):
 
 # %%
 if __name__ == "__main__":
-    data = np.load('/scratch/jru34/filtered_train_test_arrays.npz')
+    print(f'Using {N_CPUS} cpus')
+    data = np.load('/scratch/jru34/minimal_train_test_arrays.npz')
     X_train = data['X_train']
     X_test = data['X_test']
     y_train = data['y_train']
     y_test = data['y_test']
     del data
 
-    X_train, y_train = sample_x_y(X_train,y_train, 250,250,13)
-    X_test,y_test = sample_x_y(X_test,y_test,100, 100, 13)
     df = evaluate_models(X_train, y_train, X_test, y_test)
-    save_path = os.path.join(PARENT_PATH,'ts_model_results.csv')
+    save_path = os.path.join(PARENT_PATH,'all_ts_model_results.csv')
     df.to_csv(save_path, index = False)
     
-
-# %%
