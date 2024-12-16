@@ -17,7 +17,7 @@ from time import time
 import os
 
 
-PARENT_PATH = "/home/jru34/Ashborer/time_series_classification"
+
 def train_benchmark(classifier, X_train, X_test, y_train, y_test):
     clf = classifier
     start = time()
