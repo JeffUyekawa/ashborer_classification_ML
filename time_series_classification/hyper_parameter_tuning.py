@@ -1,109 +1,84 @@
 # %%
 import numpy as np
 import pandas as pd
-from aeon.classification.distance_based import KNeighborsTimeSeriesClassifier, ProximityForest
+from aeon.classification.distance_based import ProximityForest
 from aeon.classification.convolution_based import RocketClassifier
 from aeon.classification.feature_based import FreshPRINCEClassifier
-from aeon.classification.hybrid import HIVECOTEV2
 from aeon.classification.deep_learning import InceptionTimeClassifier
-from aeon.classification.dictionary_based import WEASEL
+from aeon.classification.dictionary_based import WEASEL_V2
 from aeon.classification.interval_based import RSTSF
 from aeon.classification.shapelet_based import RDSTClassifier
-from sklearn.model_selection import KFold
+import os
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
 import argparse
 
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
-from time import time 
-import os
+PARENT_PATH = "/home/jru34/Ashborer/time_series_classification"
 
 
-
-def train_benchmark(classifier, X_train, X_test, y_train, y_test):
-    clf = classifier
-    start = time()
-    print('Starting Training')
-    clf.fit(X_train,y_train)
-    print('Training Complete')
-    end= time()
-    train_time = end-start
-    start = time()
-    print('Making Prediction')
-    y_pred = clf.predict(X_test)
-    end = time()
-    pred_time = end-start
-    print('Calculating Accuracy')
-    acc = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred)
-    rec = recall_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
-    print(f"Accuracy: {acc: .2f}\n \
-        Training time: {train_time:.2f} seconds\n \
-        Prediction Time: {pred_time:.2f} seconds")
-    '''
-    Eventually add some code to save model paramters here
-    '''
+def optimize_params(X, y, model_name):
     
-    
-    return acc, prec, rec, f1, train_time, pred_time
+    classifiers = {"Rocket": {"model": RocketClassifier(), "params":{
+                            'num_kernels': [10, 100, 500,1000,2000,5000],
+                            'estimator': [None, LogisticRegression(max_iter = 1000), RandomForestClassifier()]
+                            }},
+                   "InceptionTime": {"model":InceptionTimeClassifier(),"params":{
+                            'n_classifiers': [1,3,5],
+                            'depth': [2,4,6],
+                            'n_filters': [8, 16, 32],
+                            'batch_size': [8, 16, 32],
+                            'n_epochs': [2, 5, 10, 20]
+                   }}, 
+                   "RDST": {"model": RDSTClassifier(), "params": {
+                            'max_shapelets': [10, 100, 500, 1000, 10000],
+                            'estimator': [None, LogisticRegression(max_iter = 1000)]
+                   }}, 
+                   "Weasel":{"model": WEASEL_V2(), "params": {
+                            'min_window': [2,4, 8, 16]
+                   }}, 
+                   "RSTSF": {"model": RSTSF(), "params": {
+                            'n_estimators': [50, 100, 200, 500],
+                            'n_intervals': [10, 50, 100, 200]
+                   }}, 
+                   "FreshPRINCE": {"model":FreshPRINCEClassifier(), "params":{
+                       'n_estimators': [50, 100, 200, 500]
+                   }}, 
+                   "PF": {"model":ProximityForest(), "params":{
+                       'n_trees': [10, 50, 100],
+                       'n_splitters': [1,3,5],
+                       'max_depth': [3,5,10,20]
+                   }}}
 
+    if model_name not in classifiers:
+        raise ValueError(f"Model {model_name} is not supported for Bayesian Optimization.")
 
+    clf = classifiers[model_name]['model']
+    params = classifiers[model_name]['params']
 
+    #Hyperparameter Gridsearch
+    opt = GridSearchCV(
+        estimator = clf,
+        param_grid= params,
+        scoring = 'accuracy',
+        cv = 5
+    )
+    opt.fit(X,y)
+    df = pd.DataFrame(opt.cv_results_)
+    df = df.sort_values(by='rank_test_score')
+    return df.head(5)
 
-
-def evaluate_models(X,y, model_name):
-    
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=500, random_state=13), "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(), "Weasel": WEASEL(), "RSTSF": RSTSF(), "FreshPRINCE": FreshPRINCEClassifier(), "PF": ProximityForest()}
-    
-    models = []
-    accuracies = []
-    precisions = []
-    recalls = []
-    f1s = []
-    train_times = []
-    pred_times = []
-    folds = []
-    
-
-    CV = KFold(n_splits = 5, shuffle = True, random_state = 13)
-    for i , (train_idx, test_idx) in enumerate(CV.split(X)):
-        X_train = X[train_idx]
-        X_test = X[test_idx]
-        y_train = y[train_idx]
-        y_test = y[test_idx]
-        clf = classifiers[model_name]
-        acc, prec, rec, f1, train_time, pred_time = train_benchmark(clf, X_train, X_test, y_train, y_test)
-        accuracies.append(acc)
-        precisions.append(prec)
-        recalls.append(rec)
-        f1s.append(f1)
-        train_times.append(train_time)
-        pred_times.append(pred_time)
-        models.append(model_name)
-        folds.append(i+1)
-    folds.append("Average")
-    models.append(model_name)
-    for metric in [accuracies, precisions, recalls, f1s, train_times, pred_times]:
-        metric.append(np.average(metric))
-    
-
-       
-    results = {"Model": models,"Fold": folds, "Accuracy": accuracies, "Precision": precisions, "Recall": recalls, "F1": f1s, "Train Time": train_times, "Prediction Time": pred_times}
-    df = pd.DataFrame(results)
-    return df
-
-
-
-# %%
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate a time series classification model.")
     parser.add_argument("--model_name", type=str, required=True, help="Name of the model to evaluate.")
     args = parser.parse_args()
+
     data = np.load('/scratch/jru34/minimal_train_test_arrays.npz')
     X = data['X_test']
     y = data['y_test']
     del data
+
     model_name = args.model_name
-    df = evaluate_models(X,y, model_name)
-    save_path = os.path.join(PARENT_PATH,f'{model_name}_results.csv')
-    df.to_csv(save_path, index = False)
-    
+    df = optimize_params(X, y, model_name)
+    save_path = os.path.join(PARENT_PATH, f'{model_name}_hyperparameters.csv')
+    df.to_csv(save_path, index=False)
