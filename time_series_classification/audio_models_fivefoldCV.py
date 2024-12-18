@@ -6,10 +6,11 @@ from aeon.classification.convolution_based import RocketClassifier
 from aeon.classification.feature_based import FreshPRINCEClassifier
 from aeon.classification.hybrid import HIVECOTEV2
 from aeon.classification.deep_learning import InceptionTimeClassifier
-from aeon.classification.dictionary_based import WEASEL
+from aeon.classification.dictionary_based import WEASEL_V2
 from aeon.classification.interval_based import RSTSF
 from aeon.classification.shapelet_based import RDSTClassifier
 from sklearn.model_selection import KFold
+from sklearn.linear_model import LogisticRegression
 import argparse
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
@@ -52,7 +53,7 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
 
 def evaluate_models(X,y, model_name):
     
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=500, random_state=13), "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(), "Weasel": WEASEL(), "RSTSF": RSTSF(), "FreshPRINCE": FreshPRINCEClassifier(), "PF": ProximityForest()}
+    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=2000, estimator= LogisticRegression(), random_state=13), "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(max_shapelets=1000), "Weasel": WEASEL_V2(), "RSTSF": RSTSF(), "FreshPRINCE": FreshPRINCEClassifier(), "PF": ProximityForest()}
     
     models = []
     accuracies = []
