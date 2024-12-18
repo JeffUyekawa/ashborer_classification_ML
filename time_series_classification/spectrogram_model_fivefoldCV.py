@@ -97,7 +97,8 @@ def evaluate_models(X,y):
         X_test = X[test_idx]
         y_train = y[train_idx]
         y_test = y[test_idx]
-        
+        plt.hist(y_test)
+        plt.show()
         acc, prec, rec, f1, train_time, pred_time = train_spectrogram_model(X_train, X_test, y_train, y_test)
         accuracies.append(acc)
         precisions.append(prec)
@@ -118,10 +119,13 @@ def evaluate_models(X,y):
 
 # %%
 if __name__ == "__main__":
-    data = np.load('/scratch/jru34/minimal_train_test_arrays.npz')
+    #data = np.load('/scratch/jru34/minimal_train_test_arrays.npz')
+    data = np.load(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\minimal_train_test_arrays.npz")
     X = data['X_test']
     y = data['y_test']
     del data
     df = evaluate_models(X,y)
     save_path = os.path.join(PARENT_PATH,'spectrogram_results.csv')
     df.to_csv(save_path, index = False)
+
+# %%

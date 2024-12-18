@@ -47,7 +47,7 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
     #file_path = os.path.join(parent_path, file_name)
     #with open(file_path, 'wb') as f:
         #pickle.dump(clf, f)
-    return acc, f1, prec, rec,  train_time, pred_time
+    return acc, prec, rec, f1,  train_time, pred_time
 
 
 
@@ -66,6 +66,7 @@ def evaluate_models(X_train, y_train, X_test, y_test):
     pred_times = []
 
     for model_name in classifiers:
+        print(f'{model_name}\n--------------------------------------')
         clf = classifiers[model_name]
         acc, prec, rec, f1, train_time, pred_time = train_benchmark(clf, X_train, X_test, y_train, y_test)
         accuracies.append(acc)
@@ -94,17 +95,17 @@ def sample_x_y(X,y, n, m, seed):
     y_sampled = np.concatenate([y[sample_indices_0], y[sample_indices_1]])   
     return X_sampled, y_sampled
 # %%
-data = np.load(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\filtered_train_test_arrays.npz")
+data = np.load(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\minimal_train_test_arrays.npz")
 X_train = data['X_train']
 X_test = data['X_test']
 y_train = data['y_train']
 y_test = data['y_test']
 
-X_train, y_train = sample_x_y(X_train, y_train, 20, 20)
-X_test, y_test = sample_x_y(X_test, y_test, 10, 10)
+'''X_train, y_train = sample_x_y(X_train, y_train, 10, 10, 13)
+X_test, y_test = sample_x_y(X_test, y_test, 5, 5, 13)'''
 # %%
 df = evaluate_models(X_train, y_train, X_test, y_test)
 
 # %%
-df.to_csv(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\timeseries_results.csv", index = False)
+df.to_csv(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification\early_all_timeseries_results.csv", index = False)
 # %%

@@ -63,9 +63,13 @@ np.savez(r"C:\Users\jeffu\Documents\Ash Borer Project\time_series_classification
 # %%
 
 # For use with Multiclass only
-'''train_df = pd.read_csv(filter_labeled_data(TRAIN_ANNOTATION, train_temp))
-test_df = pd.read_csv(filter_labeled_data(VAL_ANNOTATION, test_temp))
-
+train_path = r"C:\Users\jeffu\Documents\Recordings\time_series_training.csv"
+test_path = r"C:\Users\jeffu\Documents\Recordings\time_series_test.csv"
+train_temp = r"C:\Users\jeffu\Documents\Recordings\temp_path_train.csv"
+test_temp = r"C:\Users\jeffu\Documents\Recordings\temp_path_test.csv"
+train_df = pd.read_csv(filter_labeled_data(train_path, train_temp))
+test_df = pd.read_csv(filter_labeled_data(test_path, test_temp))
+#%%
 train_df = sample_multiclass(train_df,300)
 test_df = sample_multiclass(test_df, 50)
 # %%
@@ -77,4 +81,3 @@ test_path = r"C:\Users\jeffu\Documents\Recordings\time_series_test.csv"
 
 train_df.to_csv(train_path, index = False)
 test_df.to_csv(test_path, index = False)
-'''
