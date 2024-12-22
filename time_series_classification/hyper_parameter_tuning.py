@@ -42,7 +42,11 @@ def optimize_params(X, y, model_name):
                             'n_intervals': [10, 50, 100, 200]
                    }}, 
                    "FreshPRINCE": {"model":FreshPRINCEClassifier(), "params":{
-                       'n_estimators': [50, 100, 200, 500]
+                       'default_fc_parameters': ['minimal', 'efficient', 'comprehensive'],
+                       'base_estimator': [None, LogisticRegression()],
+                       'pca_solver': ['auto', 'full', 'covariance_eigh', 'arpack', 'randomized'],
+                       'n_estimators': [50, 100, 200, 500],
+                       'random_state': [13]
                    }}, 
                    "PF": {"model":ProximityForest(), "params":{
                        'n_trees': [10, 50, 100],
