@@ -17,7 +17,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from time import time 
 import os
 
-
+PARENT_PATH = "/home/jru34/Ashborer/time_series_classification"
 
 def train_benchmark(classifier, X_train, X_test, y_train, y_test):
     clf = classifier
@@ -53,7 +53,13 @@ def train_benchmark(classifier, X_train, X_test, y_train, y_test):
 
 def evaluate_models(X,y, model_name):
     
-    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),"Rocket": RocketClassifier(num_kernels=2000, estimator= LogisticRegression(), random_state=13), "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(max_shapelets=1000), "Weasel": WEASEL_V2(), "RSTSF": RSTSF(), "FreshPRINCE": FreshPRINCEClassifier(), "PF": ProximityForest()}
+    classifiers = {"DTW":KNeighborsTimeSeriesClassifier(distance = 'dtw'),
+                   "Rocket": RocketClassifier(num_kernels=2000, estimator= LogisticRegression(), random_state=13), 
+                   "HEC":HIVECOTEV2(), "InceptionTime": InceptionTimeClassifier(), "RDST": RDSTClassifier(max_shapelets=1000), 
+                   "Weasel": WEASEL_V2(min_window=8, norm_options=[False], use_first_differences= [False], word_lengths=[7,8,16]), 
+                   "RSTSF": RSTSF(), 
+                   "FreshPRINCE": FreshPRINCEClassifier(base_estimator=None, default_fc_parameters= 'minimal', n_estimators= 100, pca_solver= 'covariance_eigh', random_state= 13),
+                   "PF": ProximityForest()}
     
     models = []
     accuracies = []
@@ -100,8 +106,8 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, required=True, help="Name of the model to evaluate.")
     args = parser.parse_args()
     data = np.load('/scratch/jru34/minimal_train_test_arrays.npz')
-    X = data['X_test']
-    y = data['y_test']
+    X = data['X_train']
+    y = data['y_train']
     del data
     model_name = args.model_name
     df = evaluate_models(X,y, model_name)
